@@ -1,0 +1,58 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Smart Reward</title>
+    <script src="./node_modules/@waves/waves-api/dist/waves-api.min.js">
+
+    </script>
+
+    <script>
+    const preAlias = 'SMARTREWARD';
+    const Waves = WavesAPI.create(WavesAPI.TESTNET_CONFIG);
+
+
+
+    function getByAlias(){
+    const createAlias = {
+        alias: preAlias + document.getElementById('repositoryId').value,
+        fee: 100000,
+        timestamp: Date.now()
+    };
+    if(Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value) == null){
+        const newWallet = Waves.Seed.create();
+        Waves.API.Node.transactions.broadcast('createAlias', createAlias, newWallet.keyPair);
+        document.getElementById('displayInfoId').style.visibility = 'visible';
+    }else{
+        alert(Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value).phrase);
+    }
+
+    }
+
+    function displayByAlias(){
+     alert(Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value).phrase + ' ' + Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value).address);
+    }
+    </script>
+
+</head>
+<body>
+
+<form name="account" style="text-align: center">
+    <input type="text" name="key" size="35" id="accountId" placeholder="Ссылка на гит аккаунта работника"/>
+</form>
+
+<form name="wallet" style="text-align: center">
+    <input type="text" name="key" size="35" id="walletId" placeholder="Личный, Waves - кашелёк работника"/>
+</form>
+
+<form name="repository" style="text-align: center">
+    <input type="text" name="key" size="35" id="repositoryId" placeholder="Адрес гит-репозитория"/>
+</form>
+
+<p style="text-align: center">
+    <button onclick="getByAlias()">create wallet</button>
+</p>
+<p style="text-align: center" id="displayInfoId">
+    <button onclick="displayByAlias()" hidden>display info</button>
+</p>
+</body>
+</html>
