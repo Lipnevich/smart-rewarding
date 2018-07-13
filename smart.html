@@ -8,9 +8,7 @@
 
     const Waves = WavesAPI.create(WavesAPI.TESTNET_CONFIG);
     const git = new GitHub();
-    let currentAlias;
     let balanceCheckTimer;
-    let currentBalance;
     let currentWallet;
 
     function checkRepository(){
@@ -20,34 +18,38 @@
                 showWallet('aa'+ profileName + repositoryName);
             }).catch(e => {
                 document.getElementById('errorMessageId').textContent = e;
-                document.getElementById('container').textContent = '';
+                document.getElementById('container').style.display = 'none';
             });
 
     }
 
     function showWallet(key){
-        currentAlias = key.substring(0, Math.min(30, key.length)).toLowerCase();
+        let currentAlias = key.substring(0, Math.min(30, key.length)).toLowerCase();
         document.getElementById('userWalletId').style.display  = "block";
         document.getElementById('errorMessageId').textContent = '';
         Waves.API.Node.aliases.byAlias(currentAlias).then(wallet => {
             currentWallet = wallet;
+            currentWallet.alias = currentAlias;
+            currentWallet.aliasCreated = true;
             displayBalance();
         }).catch(e => {
             currentWallet = Waves.Seed.create();
+            currentWallet.alias = currentAlias;
             displayBalance();
         });
     }
 
-    function displayBalance(){
+    async function displayBalance(){
         document.getElementById('initRepoId').style.display = 'none';
         balanceCheckTimer = setInterval(startTimerWithInterval, 1000);
     }
 
     function startTimerWithInterval(){
         Waves.API.Node.addresses.balanceDetails(currentWallet.address).then(balanceDetails => {
-            currentBalance = balanceDetails.available / 100000000;
+            let currentBalance = balanceDetails.available / 100000000;
             if(currentBalance > 0.01) {
-                clearInterval(balanceCheckTimer);
+                createAlias();
+                createSmartContract();
             }
             document.getElementById('userWalletId').textContent = 'Адрес кошелька - ' + currentWallet.address + ' Баланс - ' + currentBalance;
         }).catch(e => {
@@ -56,16 +58,20 @@
         });;
     }
 
-    function createAlias(){
+    async function createAlias(){
         let createAlias = {
-            alias: preAlias + document.getElementById('repositoryId').value,
+            alias: currentWallet.alias,
             fee: 100000,
             timestamp: Date.now()
         };
-        Waves.API.Node.transactions.broadcast('createAlias', createAlias, newWallet.keyPair);
+        document.getElementById('containerTest').textContent = JSON.stringify(currentWallet);
+        await Waves.API.Node.transactions.broadcast('createAlias', createAlias, currentWallet.seed.keyPair);
     }
 
 
+    function createSmartContract(){
+
+    }
 
     </script>
 
@@ -97,6 +103,7 @@
 
 
 <div id="container" style="text-align: center">   </div>
+<div id="containerTest" style="text-align: center">   </div>
 <div id="errorMessageId" style=" color: red"></div>
 </div>
 </body>
