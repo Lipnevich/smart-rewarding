@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@waves/waves-api": "1.3.0",
+    "github-api": "3.0.0"
+  }
+}
