@@ -2,57 +2,132 @@
 <head>
     <meta charset="utf-8">
     <title>Smart Reward</title>
-    <script src="./node_modules/@waves/waves-api/dist/waves-api.min.js">
-
-    </script>
-
+    <script src="./node_modules/@waves/waves-api/dist/waves-api.min.js"></script>
+    <script src="./node_modules/github-api/dist/GitHub.bundle.min.js"></script>
     <script>
-    const preAlias = 'SMARTREWARD';
+    const preAlias = '-.0123456789@_';
     const Waves = WavesAPI.create(WavesAPI.TESTNET_CONFIG);
+    const git = new GitHub();
+    let currentAlias;
+    let balanceCheckTimer;
+    let currentBalance;
+
+    function checkRepository(){
+        let profileName = document.getElementById('profileId').value;
+        let repositoryName = document.getElementById('repositoryId').value;
+        git.getRepo('VladislawKravchenok','SolarSystem3').getDetails().then((repositoryDetails) => {
+                showWallet(repositoryDetails.data.html_url);
+            }).catch(function(e){
+                document.getElementById('errorMessageId').textContent = e.response.data.message;
+                document.getElementById('container').textContent = '';
+            });
+    <!--currentAlias = preAlias + document.getElementById('repositoryId').value;-->
+    <!--if(Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value).address != 'undefined'){-->
+        <!--const newWallet = Waves.Seed.create();-->
+        <!--displayBalance(newWallet.address);-->
+        <!--balanceCheckTimer = setInterval(startTimerWithInterval, 1000, newWallet.address);-->
+    <!--}else{-->
+        <!--currentAlias = Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value);-->
+        <!--displayBalance(currentAlias.address);-->
+    <!--}-->
+
+}
+
+    function showWallet(key){
+        document.getElementById('errorMessageId').textContent = '';
+        let wallet = Waves.API.Node.aliases.byAlias(preAlias + key);
+        if(!wallet){
+            wallet = Waves.Seed.create();
+        }
+        displayBalance(wallet.address);
+
+    }
 
 
 
-    function getByAlias(){
-    const createAlias = {
+
+    function displayBalance(address){
+        document.getElementById('addressId').style.display  = "block";
+        document.getElementById('balanceId').style.display  = "block";
+
+        Waves.API.Node.addresses.balanceDetails(address).then((balanceDetails) => {
+        document.getElementById('addressId').textContent = 'Адрес кашелька - ' + address;
+        document.getElementById('balanceId').textContent = 'Баланс - ' + balanceDetails.available / 100000000;
+        }).catch(e){
+            document.getElementById('errorMessageId').textContent = e.message;
+            document.getElementById('container').style.display = 'none';
+        };
+        document.getElementById('repositoryId').style.display  = 'none';
+        document.getElementById('createButtonId').style.display  = 'none';
+        balanceCheckTimer = setInterval(startTimerWithInterval, 1000, address);
+}
+
+
+
+
+    function startTimerWithInterval(address){
+       Waves.API.Node.addresses.balanceDetails(address).then((balanceDetails) => {
+            currentBalance = balanceDetails.available / 100000000;
+            document.getElementById('balanceId').textContent = 'Баланс - ' + balanceDetails.available / 100000000;
+        });
+        if(currentBalance > 0.05){
+            alert(currentBalance);
+        }
+}
+
+    function stopTimerWithInterval(address){
+        balanceCheckTimer = setTimeout(function() {
+        clearInterval(balanceCheckTimer);
+        }, 1000)
+}
+
+    function createAlias(){
+    let createAlias = {
         alias: preAlias + document.getElementById('repositoryId').value,
         fee: 100000,
         timestamp: Date.now()
     };
-    if(Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value) == null){
-        const newWallet = Waves.Seed.create();
         Waves.API.Node.transactions.broadcast('createAlias', createAlias, newWallet.keyPair);
-        document.getElementById('displayInfoId').style.visibility = 'visible';
-    }else{
-        alert(Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value).phrase);
-    }
+}
 
-    }
 
-    function displayByAlias(){
-     alert(Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value).phrase + ' ' + Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value).address);
-    }
+
     </script>
 
 </head>
 <body>
 
-<form name="account" style="text-align: center">
-    <input type="text" name="key" size="35" id="accountId" placeholder="Ссылка на гит аккаунта работника"/>
-</form>
 
-<form name="wallet" style="text-align: center">
-    <input type="text" name="key" size="35" id="walletId" placeholder="Личный, Waves - кашелёк работника"/>
-</form>
-
-<form name="repository" style="text-align: center">
-    <input type="text" name="key" size="35" id="repositoryId" placeholder="Адрес гит-репозитория"/>
-</form>
+<div style="text-align: center">
+    <label>https://github.com/</label>
+    <input type="text" name="key" size="15" id="profileId" placeholder="Profile name"/>
+    <label>/</label>
+    <input type="text" name="key" size="15" id="repositoryId" placeholder="Repository name"/>
+</div>
 
 <p style="text-align: center">
-    <button onclick="getByAlias()">create wallet</button>
+    <button onclick="checkRepository()" id="createButtonId">Создать\подключить кашелёк</button>
 </p>
-<p style="text-align: center" id="displayInfoId">
-    <button onclick="displayByAlias()" hidden>display info</button>
-</p>
+
+<div style="text-align: center" id="divAddressId">
+    <span id="addressId" style="text-align: center" hidden>address</span>
+</div>
+
+<div style="text-align: center" id="divBalanceId">
+    <span id="balanceId" style="text-align: center" hidden>balance</span>
+</div>
+
+<div style="text-align: center">
+    <input type="text" name="key" size="15" id="accountId"
+           placeholder="Ссылка на гит аккаунта работника" hidden/>
+</div>
+
+<div style="text-align: center">
+    <input type="text" name="key" size="15" id="walletId"
+           placeholder="Личный, Waves - кашелёк работника" hidden/>
+</div>
+
+<div id="container" style="text-align: center">   </div>
+<div id="errorMessageId" style="text-align: center; color: red" >   </div>
 </body>
 </html>
