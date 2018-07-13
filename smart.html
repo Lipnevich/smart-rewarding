@@ -5,73 +5,53 @@
 <script src="./node_modules/@waves/waves-api/dist/waves-api.min.js"></script>
 <script src="./node_modules/github-api/dist/GitHub.bundle.min.js"></script>
 <script>
-    const preAlias = '-.0123456789@_';
+
     const Waves = WavesAPI.create(WavesAPI.TESTNET_CONFIG);
     const git = new GitHub();
     let currentAlias;
     let balanceCheckTimer;
     let currentBalance;
+    let currentWallet;
 
     function checkRepository(){
         let profileName = document.getElementById('profileId').value;
         let repositoryName = document.getElementById('repositoryId').value;
-        git.getRepo('VladislawKravchenok','SolarSystem3').getDetails().then((repositoryDetails) => {
-                showWallet(repositoryDetails.data.html_url);
+        git.getRepo(profileName,repositoryName).getDetails().then(function(repositoryDetails){
+                showWallet('aa'+ profileName + repositoryName);
             }).catch(function(e){
-                document.getElementById('errorMessageId').textContent = e.response.data.message;
+                document.getElementById('errorMessageId').textContent = e;
                 document.getElementById('container').textContent = '';
             });
-
-    <!--currentAlias = preAlias + document.getElementById('repositoryId').value;-->
-    <!--if(Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value).address != 'undefined'){-->
-        <!--const newWallet = Waves.Seed.create();-->
-        <!--displayBalance(newWallet.address);-->
-        <!--balanceCheckTimer = setInterval(startTimerWithInterval, 1000, newWallet.address);-->
-    <!--}else{-->
-        <!--currentAlias = Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value);-->
-        <!--displayBalance(currentAlias.address);-->
-    <!--}-->
 
 }
 
     function showWallet(key){
+        currentAlias = key.substring(0, Math.min(30, key.length)).toLowerCase();
         document.getElementById('errorMessageId').textContent = '';
-        let wallet = Waves.API.Node.aliases.byAlias(preAlias + key);
-        if(!wallet){
-            wallet = Waves.Seed.create();
-        }
-        displayBalance(wallet.address);
-
+       Waves.API.Node.aliases.byAlias(currentAlias).then((wallet) => {
+            currentWallet = wallet;
+            displayBalance();
+        }).catch(function(e){
+            currentWallet = Waves.Seed.create();
+            displayBalance();
+        });
     }
 
-
-
-
-    function displayBalance(address){
-        document.getElementById('addressId').style.display  = "block";
-        document.getElementById('balanceId').style.display  = "block";
-
-        Waves.API.Node.addresses.balanceDetails(address).then((balanceDetails) => {
-        document.getElementById('addressId').textContent = 'Адрес кашелька - ' + address;
-        document.getElementById('balanceId').textContent = 'Баланс - ' + balanceDetails.available / 100000000;
-        }).catch(e){
-            document.getElementById('errorMessageId').textContent = e.message;
-            document.getElementById('container').style.display = 'none';
-        };
-        document.getElementById('repositoryId').style.display  = 'none';
-        document.getElementById('createButtonId').style.display  = 'none';
-        balanceCheckTimer = setInterval(startTimerWithInterval, 1000, address);
+    function displayBalance(){
+        document.getElementById('userWalletId').style.display  = "block";
+        document.getElementById('initRepoId').style.display = 'none';
+        balanceCheckTimer = setInterval(startTimerWithInterval, 1000);
 }
 
-
-
-
-    function startTimerWithInterval(address){
-       Waves.API.Node.addresses.balanceDetails(address).then((balanceDetails) => {
+    function startTimerWithInterval(){
+       Waves.API.Node.addresses.balanceDetails(currentWallet.address).then((balanceDetails) => {
             currentBalance = balanceDetails.available / 100000000;
-            document.getElementById('balanceId').textContent = 'Баланс - ' + balanceDetails.available / 100000000;
-        });
-        if(currentBalance > 0.05){
+            document.getElementById('userWalletId').textContent = 'Адрес кашелька - ' + currentWallet.address + 'Баланс - ' + currentBalance;
+        }).catch(function(e){
+            document.getElementById('errorMessageId').textContent = e.message;
+            document.getElementById('container').style.display = 'none';
+        });;
+        if(currentBalance > 0.005){
             alert(currentBalance);
         }
 }
@@ -100,32 +80,30 @@
 
 
 <div align="center">
-    https://github.com/
-    <input type="text" value="VladislawKravchenok" size="20" id="profileId" placeholder="Profile name"/>
-    /
-    <input type="text" value="SolarSystem3" size="20" id="repositoryId" placeholder="Repository name"/>
+    <div id="initRepoId">
+        https://github.com/
+        <input type="text" value="VladislawKravchenok" size="20" id="profileId" placeholder="Profile name"/>
+        /
+        <input type="text" value="SolarSystem3" size="20" id="repositoryId" placeholder="Repository name"/>
 
 
-    <button onclick="checkRepository()" id="createButtonId"> Создать\подключить кашелёк</button>
-
-    <div style="visibility:hidden" id="userWalletId">
-
-
+        <button onclick="checkRepository()" id="createButtonId"> Создать\подключить кашелёк</button>
     </div>
 
 
-<div style="text-align: center">
+    <div style="visibility:hidden" id="userWalletId"></div>
+
     <input type="text" name="key" size="15" id="accountId"
            placeholder="Ссылка на гит аккаунта работника" hidden/>
-</div>
 
-<div style="text-align: center">
+
+
     <input type="text" name="key" size="15" id="walletId"
            placeholder="Личный, Waves - кашелёк работника" hidden/>
-</div>
+
 
 <div id="container" style="text-align: center">   </div>
-<div id="errorMessageId" style="color: red"/>
+<div id="errorMessageId" style=" color: red"></div>
 </div>
 </body>
 </html>
