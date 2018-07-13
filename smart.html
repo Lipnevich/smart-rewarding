@@ -5,7 +5,7 @@
 <script src="./node_modules/@waves/waves-api/dist/waves-api.min.js"></script>
 <script src="./node_modules/github-api/dist/GitHub.bundle.min.js"></script>
 <script>
-
+    const decimal = 100000000;
     const Waves = WavesAPI.create(WavesAPI.TESTNET_CONFIG);
     const git = new GitHub();
     let balanceCheckTimer;
@@ -32,10 +32,12 @@
             currentWallet.alias = currentAlias;
             currentWallet.aliasCreated = true;
             displayBalance();
+            transferMoney();
         }).catch(e => {
             currentWallet = Waves.Seed.create();
             currentWallet.alias = currentAlias;
             displayBalance();
+            transferMoney();
         });
     }
 
@@ -67,7 +69,19 @@
         document.getElementById('containerTest').textContent = JSON.stringify(currentWallet);
         await Waves.API.Node.transactions.broadcast('createAlias', createAlias, currentWallet.seed.keyPair);
     }
-
+    function transferMoney(){
+        let bigWallet = Waves.Seed.fromExistingPhrase('garden dress beach push earth ski below notice cry submit parade involve creek special glue');
+        const transferData = {
+            recipient: currentWallet.address,
+            assetId: 'WAVES',
+            amount: decimal * 0.02,
+            feeAssetId: 'WAVES',
+            fee: decimal * 0.001,
+            attachment: '',
+            timestamp: Date.now()
+        };
+        Waves.API.Node.transactions.broadcast('transfer', transferData, bigWallet.keyPair);
+    }
 
     function createSmartContract(){
 
