@@ -16,60 +16,54 @@
     function checkRepository(){
         let profileName = document.getElementById('profileId').value;
         let repositoryName = document.getElementById('repositoryId').value;
-        git.getRepo(profileName,repositoryName).getDetails().then(function(repositoryDetails){
+        git.getRepo(profileName,repositoryName).getDetails().then(() => {
                 showWallet('aa'+ profileName + repositoryName);
-            }).catch(function(e){
+            }).catch(e => {
                 document.getElementById('errorMessageId').textContent = e;
                 document.getElementById('container').textContent = '';
             });
 
-}
+    }
 
     function showWallet(key){
         currentAlias = key.substring(0, Math.min(30, key.length)).toLowerCase();
+        document.getElementById('userWalletId').style.display  = "block";
         document.getElementById('errorMessageId').textContent = '';
-       Waves.API.Node.aliases.byAlias(currentAlias).then((wallet) => {
+        Waves.API.Node.aliases.byAlias(currentAlias).then(wallet => {
             currentWallet = wallet;
             displayBalance();
-        }).catch(function(e){
+        }).catch(e => {
             currentWallet = Waves.Seed.create();
             displayBalance();
         });
     }
 
     function displayBalance(){
-        document.getElementById('userWalletId').style.display  = "block";
         document.getElementById('initRepoId').style.display = 'none';
         balanceCheckTimer = setInterval(startTimerWithInterval, 1000);
-}
+    }
 
     function startTimerWithInterval(){
-       Waves.API.Node.addresses.balanceDetails(currentWallet.address).then((balanceDetails) => {
+        Waves.API.Node.addresses.balanceDetails(currentWallet.address).then(balanceDetails => {
             currentBalance = balanceDetails.available / 100000000;
-            document.getElementById('userWalletId').textContent = 'Адрес кашелька - ' + currentWallet.address + 'Баланс - ' + currentBalance;
-        }).catch(function(e){
+            if(currentBalance > 0.01) {
+                clearInterval(balanceCheckTimer);
+            }
+            document.getElementById('userWalletId').textContent = 'Адрес кошелька - ' + currentWallet.address + ' Баланс - ' + currentBalance;
+        }).catch(e => {
             document.getElementById('errorMessageId').textContent = e.message;
             document.getElementById('container').style.display = 'none';
         });;
-        if(currentBalance > 0.005){
-            alert(currentBalance);
-        }
-}
-
-    function stopTimerWithInterval(address){
-        balanceCheckTimer = setTimeout(function() {
-        clearInterval(balanceCheckTimer);
-        }, 1000)
-}
+    }
 
     function createAlias(){
-    let createAlias = {
-        alias: preAlias + document.getElementById('repositoryId').value,
-        fee: 100000,
-        timestamp: Date.now()
-    };
+        let createAlias = {
+            alias: preAlias + document.getElementById('repositoryId').value,
+            fee: 100000,
+            timestamp: Date.now()
+        };
         Waves.API.Node.transactions.broadcast('createAlias', createAlias, newWallet.keyPair);
-}
+    }
 
 
 
@@ -91,7 +85,7 @@
     </div>
 
 
-    <div style="visibility:hidden" id="userWalletId"></div>
+    <div id="userWalletId"></div>
 
     <input type="text" name="key" size="15" id="accountId"
            placeholder="Ссылка на гит аккаунта работника" hidden/>
