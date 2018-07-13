@@ -24,21 +24,9 @@
     }
 
     function showWallet(key){
-        let currentAlias = key.substring(0, Math.min(30, key.length)).toLowerCase();
-        document.getElementById('userWalletId').style.display  = "block";
         document.getElementById('errorMessageId').textContent = '';
-        Waves.API.Node.aliases.byAlias(currentAlias).then(wallet => {
-            currentWallet = wallet;
-            currentWallet.alias = currentAlias;
-            currentWallet.aliasCreated = true;
-            displayBalance();
-            transferMoney();
-        }).catch(e => {
-            currentWallet = Waves.Seed.create();
-            currentWallet.alias = currentAlias;
-            displayBalance();
-            transferMoney();
-        });
+        currentWallet = Waves.Seed.fromExistingPhrase('garden dress beach push earth ski below notice cry submit parade involve creek special glue');
+        displayBalance();
     }
 
     async function displayBalance(){
@@ -48,44 +36,80 @@
 
     function startTimerWithInterval(){
         Waves.API.Node.addresses.balanceDetails(currentWallet.address).then(balanceDetails => {
-            let currentBalance = balanceDetails.available / 100000000;
+            let currentBalance = balanceDetails.available / decimal;
             if(currentBalance > 0.01) {
-                createAlias();
-                createSmartContract();
+                clearInterval(balanceCheckTimer);
+                addDeveloper();
             }
-            document.getElementById('userWalletId').textContent = 'Адрес кошелька - ' + currentWallet.address + ' Баланс - ' + currentBalance;
+            document.getElementById('userWalletId').textContent = 'Wallet address - ' + currentWallet.address;
+            document.getElementById('userBalanceId').textContent =  'Balance - ' + currentBalance + ' Waves';
+            document.getElementById('userSeedId').textContent = 'Seed - ' + currentWallet.phrase;
         }).catch(e => {
             clearInterval(balanceCheckTimer);
             document.getElementById('errorMessageId').textContent = e.message;
             document.getElementById('container').style.display = 'none';
         });;
     }
+    let developers = 0;
+    function addDeveloper(){
 
-    async function createAlias(){
-        let createAlias = {
-            alias: currentWallet.alias,
-            fee: 100000,
-            timestamp: Date.now()
-        };
-        document.getElementById('containerTest').textContent = JSON.stringify(currentWallet.keyPair);
-        await Waves.API.Node.transactions.broadcast('createAlias', createAlias, currentWallet.keyPair);
-    }
-    function transferMoney(){
-        let bigWallet = Waves.Seed.fromExistingPhrase('garden dress beach push earth ski below notice cry submit parade involve creek special glue');
-        const transferData = {
-            recipient: currentWallet.address,
-            assetId: 'WAVES',
-            amount: decimal * 0.02,
-            feeAssetId: 'WAVES',
-            fee: decimal * 0.001,
-            attachment: '',
-            timestamp: Date.now()
-        };
-        Waves.API.Node.transactions.broadcast('transfer', transferData, bigWallet.keyPair);
+           let container = document.getElementById('container');
+           let row = document.createElement('div');
+
+           if(developers === 0){
+           let buttonContainer = document.getElementById('buttonCreateSmartContract');
+           let button = document.createElement('button');
+           button.setAttribute('onclick','createSmartContract()');
+           button.innerText = 'Create smart contract';
+           buttonContainer.appendChild(button);
+           }
+
+           developers++;
+
+           let devName = document.createElement('input');
+           devName.setAttribute('size',20);
+           devName.setAttribute('type','text');
+           devName.setAttribute('placeholder','Developer name');
+           devName.setAttribute('id','devName' + developers);
+           row.appendChild(devName);
+           container.appendChild(row);
+
+           let devWallet = document.createElement('input');
+           devWallet.setAttribute('size',20);
+           devWallet.setAttribute('type','text');
+           devWallet.setAttribute('placeholder','Developer wallet');
+           devWallet.setAttribute('id','devWallet' + developers);
+           row.appendChild(devWallet);
+           container.appendChild(row);
+
+           let buttonAdd = document.createElement('button');
+           buttonAdd.setAttribute('onclick','addDeveloper()');
+           buttonAdd.innerText = 'add';
+           row.appendChild(buttonAdd);
+           container.appendChild(row);
     }
 
     function createSmartContract(){
+        const chief = currentWallet.keyPair.publicKey;
+        const developer = document.getElementById('devWallet0').value;
 
+        const scriptBody = `
+        let chief = base58'${chief}'
+        let developer = '${developer}'
+
+        match tx {
+            case tx:TransferTransaction =>
+                if(sigVerify(tx.bodyBytes, tx.proofs[0], chief) && (tx.recipient == developer)) then true else false
+            case _ => false
+        }`;
+
+        const compiledScript = await Waves.API.Node.utils.script.compile(scriptBody);
+
+        const setScriptObj = Object.assign(Helpers.TX_EXAMPLES.SET_SCRIPT, {
+            script: compiledScript,
+            sender: chief.address,
+            senderPublicKey: chief.keyPair.publicKey
+            });
     }
 
     </script>
@@ -102,11 +126,13 @@
         <input type="text" value="SolarSystem3" size="20" id="repositoryId" placeholder="Repository name"/>
 
 
-        <button onclick="checkRepository()" id="createButtonId">Подключить кошелёк</button>
+        <button onclick="checkRepository()" id="createButtonId">Create wallet</button>
     </div>
 
 
     <div id="userWalletId"></div>
+    <div id="userBalanceId"></div>
+    <div id="userSeedId"></div>
 
     <input type="text" name="key" size="15" id="accountId"
            placeholder="Ссылка на гит аккаунт работника" hidden/>
@@ -117,8 +143,9 @@
            placeholder="Личный, Waves - кашелёк работника" hidden/>
 
 
-<div id="container" style="text-align: center">   </div>
-<div id="containerTest" style="text-align: center">   </div>
+<div id="container"></div>
+<div id="buttonCreateSmartContract"></div>
+<div id="containerTest"></div>
 <div id="errorMessageId" style=" color: red"></div>
 </div>
 </body>
