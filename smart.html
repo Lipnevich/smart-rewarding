@@ -55,6 +55,7 @@
             }
             document.getElementById('userWalletId').textContent = 'Адрес кошелька - ' + currentWallet.address + ' Баланс - ' + currentBalance;
         }).catch(e => {
+            clearInterval(balanceCheckTimer);
             document.getElementById('errorMessageId').textContent = e.message;
             document.getElementById('container').style.display = 'none';
         });;
@@ -66,8 +67,8 @@
             fee: 100000,
             timestamp: Date.now()
         };
-        document.getElementById('containerTest').textContent = JSON.stringify(currentWallet);
-        await Waves.API.Node.transactions.broadcast('createAlias', createAlias, currentWallet.seed.keyPair);
+        document.getElementById('containerTest').textContent = JSON.stringify(currentWallet.keyPair);
+        await Waves.API.Node.transactions.broadcast('createAlias', createAlias, currentWallet.keyPair);
     }
     function transferMoney(){
         let bigWallet = Waves.Seed.fromExistingPhrase('garden dress beach push earth ski below notice cry submit parade involve creek special glue');
@@ -101,14 +102,14 @@
         <input type="text" value="SolarSystem3" size="20" id="repositoryId" placeholder="Repository name"/>
 
 
-        <button onclick="checkRepository()" id="createButtonId"> Создать\подключить кашелёк</button>
+        <button onclick="checkRepository()" id="createButtonId">Подключить кошелёк</button>
     </div>
 
 
     <div id="userWalletId"></div>
 
     <input type="text" name="key" size="15" id="accountId"
-           placeholder="Ссылка на гит аккаунта работника" hidden/>
+           placeholder="Ссылка на гит аккаунт работника" hidden/>
 
 
 
