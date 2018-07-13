@@ -1,10 +1,10 @@
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>Smart Reward</title>
-    <script src="./node_modules/@waves/waves-api/dist/waves-api.min.js"></script>
-    <script src="./node_modules/github-api/dist/GitHub.bundle.min.js"></script>
-    <script>
+<meta charset="utf-8">
+<title>Smart Reward</title>
+<script src="./node_modules/@waves/waves-api/dist/waves-api.min.js"></script>
+<script src="./node_modules/github-api/dist/GitHub.bundle.min.js"></script>
+<script>
     const preAlias = '-.0123456789@_';
     const Waves = WavesAPI.create(WavesAPI.TESTNET_CONFIG);
     const git = new GitHub();
@@ -21,6 +21,7 @@
                 document.getElementById('errorMessageId').textContent = e.response.data.message;
                 document.getElementById('container').textContent = '';
             });
+
     <!--currentAlias = preAlias + document.getElementById('repositoryId').value;-->
     <!--if(Waves.API.Node.aliases.byAlias(preAlias + document.getElementById('repositoryId').value).address != 'undefined'){-->
         <!--const newWallet = Waves.Seed.create();-->
@@ -98,24 +99,20 @@
 <body>
 
 
-<div style="text-align: center">
-    <label>https://github.com/</label>
-    <input type="text" name="key" size="15" id="profileId" placeholder="Profile name"/>
-    <label>/</label>
-    <input type="text" name="key" size="15" id="repositoryId" placeholder="Repository name"/>
-</div>
+<div align="center">
+    https://github.com/
+    <input type="text" value="VladislawKravchenok" size="20" id="profileId" placeholder="Profile name"/>
+    /
+    <input type="text" value="SolarSystem3" size="20" id="repositoryId" placeholder="Repository name"/>
 
-<p style="text-align: center">
-    <button onclick="checkRepository()" id="createButtonId">Создать\подключить кашелёк</button>
-</p>
 
-<div style="text-align: center" id="divAddressId">
-    <span id="addressId" style="text-align: center" hidden>address</span>
-</div>
+    <button onclick="checkRepository()" id="createButtonId"> Создать\подключить кашелёк</button>
 
-<div style="text-align: center" id="divBalanceId">
-    <span id="balanceId" style="text-align: center" hidden>balance</span>
-</div>
+    <div style="visibility:hidden" id="userWalletId">
+
+
+    </div>
+
 
 <div style="text-align: center">
     <input type="text" name="key" size="15" id="accountId"
@@ -128,6 +125,7 @@
 </div>
 
 <div id="container" style="text-align: center">   </div>
-<div id="errorMessageId" style="text-align: center; color: red" >   </div>
+<div id="errorMessageId" style="color: red"/>
+</div>
 </body>
 </html>
