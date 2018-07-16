@@ -2,7 +2,7 @@
 <head>
 <meta charset="utf-8">
 <title>Smart Reward</title>
-<script src="./node_modules/@waves/waves-api/dist/waves-api.min.js"></script>
+<script src="./node_modules/@waves/waves-api/dist/waves-api.js"></script>
 <script src="./node_modules/github-api/dist/GitHub.bundle.min.js"></script>
 <script>
     const decimal = 100000000;
@@ -11,11 +11,7 @@
     let balanceCheckTimer;
     let currentWallet;
 
-    function test(){
-        currentWallet = Waves.Seed.fromExistingPhrase('garden dress beach push earth ski below notice cry submit parade involve creek special glue');
-        let devArray = [{recipient:'3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB',amount:0.02 * decimal}];
-        testSmart();
-    }
+
     function checkRepository(){
         let profileName = document.getElementById('profileId').value;
         let repositoryName = document.getElementById('repositoryId').value;
@@ -98,22 +94,55 @@
     let smart;
 
     function testSmart(){
-        smart = `let chiefPubKey = base58'5iWWTVEqyPmqvyKGLYbue4yGhTjUM1KSyssaqMeWWQWy'
-        let developer0 = '3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB'
-        <!--let developer0 = extract(addressFromString('3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB')).bytes-->
-        match tx { case tx:TransferTransaction =>
-        <!--let txRecipient = addressFromRecipient(tx.recipient).bytes-->
-        if(sigVerify(tx.bodyBytes, tx.proofs[0], chiefPubKey)) then true else false
-        <!--if((developer == txRecipient) && sigVerify(tx.bodyBytes, tx.proofs[0], chiefPubKey)) then true else false-->
-        case _ => true}`;
+        currentWallet = Waves.Seed.fromExistingPhrase('income desk floor glide act forward pilot poet evoke squirrel circle april pupil razor pole');
+        let devArray = [{recipient:'3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB',amount:0.02 * decimal}];
+        const lenaPubKey = '5XpeKMDVe1AMhuxUdB8dAg1Q26A9XFicvVQohxdcohSb';
+        const inalPubKey = 'EUxurMktqev3KzBPGD5hhMb6GtyGU2u7sTjaz9DoL73Y';
+        const smart = `
+        let lenaPubKey     = base58'${lenaPubKey}'
+        let inalPubKey     = base58'${inalPubKey}'
+        let elephantPubKey = base58'${currentWallet.keyPair.publicKey}'
 
-        let container = document.getElementById('container');
-        container.textContent = smart;
+
+    match tx {
+      case tx:TransferTransaction =>
+        let txRecipient = addressFromRecipient(tx.recipient).bytes
+        if(sigVerify(tx.bodyBytes, tx.proofs[0], elephantPubKey)) then true else false
+      case _ => true
+    }`;
+
+        <!--smart = `let chiefPubKey = base58'5iWWTVEqyPmqvyKGLYbue4yGhTjUM1KSyssaqMeWWQWy'-->
+        <!--let developer0 = '3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB'-->
+        <!--&lt;!&ndash;let developer0 = extract(addressFromString('3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB')).bytes&ndash;&gt;-->
+        <!--match tx { case tx:TransferTransaction =>-->
+        <!--&lt;!&ndash;let txRecipient = addressFromRecipient(tx.recipient).bytes&ndash;&gt;-->
+        <!--if(sigVerify(tx.bodyBytes, tx.proofs[0], chiefPubKey)) then true else false-->
+        <!--&lt;!&ndash;if((developer == txRecipient) && sigVerify(tx.bodyBytes, tx.proofs[0], chiefPubKey)) then true else false&ndash;&gt;-->
+        <!--case _ => true}`;-->
+
+        <!--let container = document.getElementById('container');-->
+        <!--container.textContent = smart;-->
 
         Waves.API.Node.utils.script.compile(smart).then(compiledScript=>{
             deploySmartContract(compiledScript);
-        });
+        }).catch(e => {
+                document.getElementById('errorMessageId').textContent = e;
+            });;
     }
+    function testTransfer(){
+            const transferData = {
+            recipient: '3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB',
+            assetId: 'WAVES',
+            amount: decimal * 0.02,
+            feeAssetId: 'WAVES',
+            fee: decimal * 0.005,
+            attachment: '',
+            timestamp: Date.now()
+        };
+        Waves.API.Node.transactions.broadcast(Waves.constants.TRANSFER_TX_NAME, transferData, currentWallet.keyPair);
+
+    }
+
 
     function createSmartContract(developersArray){
 
@@ -151,13 +180,13 @@
     }
 
     async function deploySmartContract(compiledScript){
-        const setScriptObj = Object.assign(Helpers.TX_EXAMPLES.SET_SCRIPT, {
+        const setScriptObj = {
+            fee: decimal * 0.005,
             script: compiledScript,
             sender: currentWallet.address,
             senderPublicKey: currentWallet.keyPair.publicKey
-            });
-        const setScriptTx = await Waves.tools.createTransaction(Waves.constants.SET_SCRIPT_TX_NAME, setScriptObj);
-        setScriptTx.addProof(elephantAccount.keyPair.privateKey);
+            };
+        Waves.API.Node.transactions.broadcast(Waves.constants.SET_SCRIPT_TX_NAME, setScriptObj, currentWallet.keyPair);
     }
 
     async function signTransaction(){
@@ -190,7 +219,7 @@
             attachment: '',
             timestamp: Date.now()
         };
-        Waves.API.Node.transactions.broadcast('transfer', transferData, currentWallet.keyPair);
+        Waves.API.Node.transactions.broadcast('setScript', transferData, currentWallet.keyPair);
         }
     }
 
@@ -201,7 +230,8 @@
 
 
 <div align="center">
-    <button onclick="test()">TEST</button>
+    <button onclick="testTransfer()">test transfer</button>
+    <button onclick="testSmart()">test smart</button>
     <div id="initRepoId">
         https://github.com/
         <input type="text" value="VladislawKravchenok" size="20" id="profileId" placeholder="Profile name"/>
