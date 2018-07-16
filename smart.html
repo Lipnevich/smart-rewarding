@@ -11,6 +11,11 @@
     let balanceCheckTimer;
     let currentWallet;
 
+    function test(){
+        currentWallet = Waves.Seed.fromExistingPhrase('garden dress beach push earth ski below notice cry submit parade involve creek special glue');
+        let devArray = [{recipient:'3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB',amount:0.02 * decimal}];
+        testSmart();
+    }
     function checkRepository(){
         let profileName = document.getElementById('profileId').value;
         let repositoryName = document.getElementById('repositoryId').value;
@@ -50,6 +55,7 @@
             document.getElementById('container').style.display = 'none';
         });;
     }
+
     let developers = 0;
     function addDeveloper(){
 
@@ -89,30 +95,104 @@
            container.appendChild(row);
     }
 
-    function createSmartContract(){
-        const chief = currentWallet.keyPair.publicKey;
-        const developer = document.getElementById('devWallet0').value;
+    let smart;
 
-        const scriptBody = `
-        let chief = base58'${chief}'
-        let developer = '${developer}'
+    function testSmart(){
+        smart = `let chiefPubKey = base58'5iWWTVEqyPmqvyKGLYbue4yGhTjUM1KSyssaqMeWWQWy'
+        let developer0 = '3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB'
+        <!--let developer0 = extract(addressFromString('3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB')).bytes-->
+        match tx { case tx:TransferTransaction =>
+        <!--let txRecipient = addressFromRecipient(tx.recipient).bytes-->
+        if(sigVerify(tx.bodyBytes, tx.proofs[0], chiefPubKey)) then true else false
+        <!--if((developer == txRecipient) && sigVerify(tx.bodyBytes, tx.proofs[0], chiefPubKey)) then true else false-->
+        case _ => true}`;
 
-        match tx {
-            case tx:TransferTransaction =>
-                if(sigVerify(tx.bodyBytes, tx.proofs[0], chief) && (tx.recipient == developer)) then true else false
-            case _ => false
-        }`;
+        let container = document.getElementById('container');
+        container.textContent = smart;
 
-        const compiledScript = await Waves.API.Node.utils.script.compile(scriptBody);
-
-        const setScriptObj = Object.assign(Helpers.TX_EXAMPLES.SET_SCRIPT, {
-            script: compiledScript,
-            sender: chief.address,
-            senderPublicKey: chief.keyPair.publicKey
-            });
+        Waves.API.Node.utils.script.compile(smart).then(compiledScript=>{
+            deploySmartContract(compiledScript);
+        });
     }
 
+    function createSmartContract(developersArray){
 
+        smart = "let chiefPubKey = base58'${currentWallet.keyPair.publicKey}'";
+        smart += '\n';
+        for(let i = 0; i < developersArray.length;i++){
+            smart += "let developer" + i + " = extract(addressFromString('" + developersArray[i].recipient + "')).bytes";
+            smart += '\n';
+        }
+
+        smart += "match tx { case tx:TransferTransaction =>";
+        smart += '\n';
+        for(let i = 0; i<developersArray.length; i++){
+            smart += "let txRecipient" + i + " = addressFromRecipient(tx.recipient).bytes";
+             smart += '\n';
+        }
+
+        smart += "if(";
+        for(let i = 0; i < developersArray.length; i++){
+            smart += "(developer" + i + " == txRecipient" + i + ")";
+            if(i + 1 < developersArray.length){
+            smart += ' ||';
+            }
+        }
+        smart += ' && sigVerify(tx.bodyBytes,tx.proofs[0],chiefPubKey)) then true else false';
+         smart += '\n';
+        smart += 'case _ => true';
+
+        let container = document.getElementById('container');
+        container.textContent = smart;
+
+        Waves.API.Node.utils.script.compile(smart).then(compiledScript=>{
+            deploySmartContract(compiledScript);
+        });
+    }
+
+    async function deploySmartContract(compiledScript){
+        const setScriptObj = Object.assign(Helpers.TX_EXAMPLES.SET_SCRIPT, {
+            script: compiledScript,
+            sender: currentWallet.address,
+            senderPublicKey: currentWallet.keyPair.publicKey
+            });
+        const setScriptTx = await Waves.tools.createTransaction(Waves.constants.SET_SCRIPT_TX_NAME, setScriptObj);
+        setScriptTx.addProof(elephantAccount.keyPair.privateKey);
+    }
+
+    async function signTransaction(){
+        let currentBalance;
+        Waves.API.Node.addresses.balanceDetails(currentWallet.address).then(balanceDetails => {
+            currentBalance = balanceDetails.available;
+        });
+
+        for(let i = 0;i<developers;i++){
+            const transferTxObj = Object.assign(Helpers.TX_EXAMPLES.TRANSFER, {
+                recipient: document.getElementById('devWallet' + i).address,
+                amount: decimal * 0.01,
+                sender: currentWallet.address,
+                senderPublicKey: currentWallet.keyPair.publicKey
+            });
+            const transferTx = await Waves.tools.createTransaction(Waves.constants.TRANSFER_TX_NAME, transferTxObj);
+            transferTx.addProof(currentWallet.keyPair.privateKey);
+            const transferTxJSON = await transferTx.getJSON();
+        }
+
+    }
+    function transferMoney(){
+        for(let i = 0;i<developers;i++){
+            const transferData = {
+            recipient: document.getElementById('devWallet' + i).address,
+            assetId: 'WAVES',
+            amount: decimal * 0.02,
+            feeAssetId: 'WAVES',
+            fee: decimal * 0.001,
+            attachment: '',
+            timestamp: Date.now()
+        };
+        Waves.API.Node.transactions.broadcast('transfer', transferData, currentWallet.keyPair);
+        }
+    }
 
     </script>
 
@@ -121,6 +201,7 @@
 
 
 <div align="center">
+    <button onclick="test()">TEST</button>
     <div id="initRepoId">
         https://github.com/
         <input type="text" value="VladislawKravchenok" size="20" id="profileId" placeholder="Profile name"/>
