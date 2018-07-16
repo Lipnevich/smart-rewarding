@@ -2,123 +2,14 @@
 <head>
 <meta charset="utf-8">
 <title>Smart Reward</title>
-<script src="./node_modules/@waves/waves-api/dist/waves-api.min.js"></script>
-<script src="./node_modules/github-api/dist/GitHub.bundle.min.js"></script>
-<script>
-    const decimal = 100000000;
-    const Waves = WavesAPI.create(WavesAPI.TESTNET_CONFIG);
-    const git = new GitHub();
-    let balanceCheckTimer;
-    let currentWallet;
-
-    function checkRepository(){
-        let profileName = document.getElementById('profileId').value;
-        let repositoryName = document.getElementById('repositoryId').value;
-        git.getRepo(profileName,repositoryName).getDetails().then(() => {
-                showWallet('aa'+ profileName + repositoryName);
-            }).catch(e => {
-                document.getElementById('errorMessageId').textContent = e;
-                document.getElementById('container').style.display = 'none';
-            });
-
-    }
-
-    function showWallet(key){
-        document.getElementById('errorMessageId').textContent = '';
-        currentWallet = Waves.Seed.fromExistingPhrase('garden dress beach push earth ski below notice cry submit parade involve creek special glue');
-        displayBalance();
-    }
-
-    async function displayBalance(){
-        document.getElementById('initRepoId').style.display = 'none';
-        balanceCheckTimer = setInterval(startTimerWithInterval, 1000);
-    }
-
-    function startTimerWithInterval(){
-        Waves.API.Node.addresses.balanceDetails(currentWallet.address).then(balanceDetails => {
-            let currentBalance = balanceDetails.available / decimal;
-            if(currentBalance > 0.01) {
-                clearInterval(balanceCheckTimer);
-                addDeveloper();
-            }
-            document.getElementById('userWalletId').textContent = 'Wallet address - ' + currentWallet.address;
-            document.getElementById('userBalanceId').textContent =  'Balance - ' + currentBalance + ' Waves';
-            document.getElementById('userSeedId').textContent = 'Seed - ' + currentWallet.phrase;
-        }).catch(e => {
-            clearInterval(balanceCheckTimer);
-            document.getElementById('errorMessageId').textContent = e.message;
-            document.getElementById('container').style.display = 'none';
-        });;
-    }
-    let developers = 0;
-    function addDeveloper(){
-
-           let container = document.getElementById('container');
-           let row = document.createElement('div');
-
-           if(developers === 0){
-           let buttonContainer = document.getElementById('buttonCreateSmartContract');
-           let button = document.createElement('button');
-           button.setAttribute('onclick','createSmartContract()');
-           button.innerText = 'Create smart contract';
-           buttonContainer.appendChild(button);
-           }
-
-           developers++;
-
-           let devName = document.createElement('input');
-           devName.setAttribute('size',20);
-           devName.setAttribute('type','text');
-           devName.setAttribute('placeholder','Developer name');
-           devName.setAttribute('id','devName' + developers);
-           row.appendChild(devName);
-           container.appendChild(row);
-
-           let devWallet = document.createElement('input');
-           devWallet.setAttribute('size',20);
-           devWallet.setAttribute('type','text');
-           devWallet.setAttribute('placeholder','Developer wallet');
-           devWallet.setAttribute('id','devWallet' + developers);
-           row.appendChild(devWallet);
-           container.appendChild(row);
-
-           let buttonAdd = document.createElement('button');
-           buttonAdd.setAttribute('onclick','addDeveloper()');
-           buttonAdd.innerText = 'add';
-           row.appendChild(buttonAdd);
-           container.appendChild(row);
-    }
-
-    function createSmartContract(){
-        const chief = currentWallet.keyPair.publicKey;
-        const developer = document.getElementById('devWallet0').value;
-
-        const scriptBody = `
-        let chief = base58'${chief}'
-        let developer = '${developer}'
-
-        match tx {
-            case tx:TransferTransaction =>
-                if(sigVerify(tx.bodyBytes, tx.proofs[0], chief) && (tx.recipient == developer)) then true else false
-            case _ => false
-        }`;
-
-        const compiledScript = await Waves.API.Node.utils.script.compile(scriptBody);
-
-        const setScriptObj = Object.assign(Helpers.TX_EXAMPLES.SET_SCRIPT, {
-            script: compiledScript,
-            sender: chief.address,
-            senderPublicKey: chief.keyPair.publicKey
-            });
-    }
-
-    </script>
+<script src="smart.js"></script>
 
 </head>
 <body>
 
 
 <div align="center">
+    <button onclick="test()">TEST</button>
     <div id="initRepoId">
         https://github.com/
         <input type="text" value="VladislawKravchenok" size="20" id="profileId" placeholder="Profile name"/>
