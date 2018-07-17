@@ -1,242 +1,369 @@
 <html>
 <head>
-<meta charset="utf-8">
-<title>Smart Reward</title>
-<script src="./node_modules/@waves/waves-api/dist/waves-api.js"></script>
-<script src="./node_modules/github-api/dist/GitHub.bundle.min.js"></script>
-<script>
-    const decimal = 100000000;
-    const Waves = WavesAPI.create(WavesAPI.TESTNET_CONFIG);
-    const git = new GitHub();
-    let balanceCheckTimer;
-    let currentWallet;
+    <meta charset="utf-8">
+    <title>Smart Reward</title>
+    <script src="vendor/waves-api.min.js"></script>
+    <script src="vendor/GitHub.bundle.min.js"></script>
+    <script>
 
+    <!--++++++++++++++++++++++++++++++++++++ UI +++++++++++++++++++++++++++++++++++++++-->
 
-    function checkRepository(){
-        let profileName = document.getElementById('profileId').value;
-        let repositoryName = document.getElementById('repositoryId').value;
-        git.getRepo(profileName,repositoryName).getDetails().then(() => {
-                showWallet('aa'+ profileName + repositoryName);
-            }).catch(e => {
-                document.getElementById('errorMessageId').textContent = e;
-                document.getElementById('container').style.display = 'none';
-            });
-
-    }
-
-    function showWallet(key){
-        document.getElementById('errorMessageId').textContent = '';
-        currentWallet = Waves.Seed.fromExistingPhrase('garden dress beach push earth ski below notice cry submit parade involve creek special glue');
-        displayBalance();
-    }
-
-    async function displayBalance(){
-        document.getElementById('initRepoId').style.display = 'none';
-        balanceCheckTimer = setInterval(startTimerWithInterval, 1000);
-    }
-
-    function startTimerWithInterval(){
-        Waves.API.Node.addresses.balanceDetails(currentWallet.address).then(balanceDetails => {
-            let currentBalance = balanceDetails.available / decimal;
-            if(currentBalance > 0.01) {
-                clearInterval(balanceCheckTimer);
-                addDeveloper();
-            }
-            document.getElementById('userWalletId').textContent = 'Wallet address - ' + currentWallet.address;
-            document.getElementById('userBalanceId').textContent =  'Balance - ' + currentBalance + ' Waves';
-            document.getElementById('userSeedId').textContent = 'Seed - ' + currentWallet.phrase;
-        }).catch(e => {
-            clearInterval(balanceCheckTimer);
-            document.getElementById('errorMessageId').textContent = e.message;
-            document.getElementById('container').style.display = 'none';
-        });;
-    }
-
-    let developers = 0;
+    let developerNumber = 0;
+    let developers = [];
     function addDeveloper(){
-
+           if(developerNumber > 9) return;
            let container = document.getElementById('container');
            let row = document.createElement('div');
-
-           if(developers === 0){
-           let buttonContainer = document.getElementById('buttonCreateSmartContract');
-           let button = document.createElement('button');
-           button.setAttribute('onclick','createSmartContract()');
-           button.innerText = 'Create smart contract';
-           buttonContainer.appendChild(button);
-           }
-
-           developers++;
 
            let devName = document.createElement('input');
            devName.setAttribute('size',20);
            devName.setAttribute('type','text');
            devName.setAttribute('placeholder','Developer name');
-           devName.setAttribute('id','devName' + developers);
+           devName.setAttribute('id','devName' + developerNumber);
            row.appendChild(devName);
-           container.appendChild(row);
 
            let devWallet = document.createElement('input');
-           devWallet.setAttribute('size',20);
+           devWallet.setAttribute('size',40);
            devWallet.setAttribute('type','text');
            devWallet.setAttribute('placeholder','Developer wallet');
-           devWallet.setAttribute('id','devWallet' + developers);
+           devWallet.setAttribute('id','devWallet' + developerNumber);
            row.appendChild(devWallet);
-           container.appendChild(row);
 
-           let buttonAdd = document.createElement('button');
-           buttonAdd.setAttribute('onclick','addDeveloper()');
-           buttonAdd.innerText = 'add';
-           row.appendChild(buttonAdd);
-           container.appendChild(row);
+           if(developerNumber < 1){
+            let buttonAdd = document.createElement('button');
+            buttonAdd.setAttribute('onclick','addDeveloper()');
+            buttonAdd.setAttribute('id','addDeveloper');
+            buttonAdd.innerText = 'add';
+            row.appendChild(buttonAdd);
+           }
+
+           if(developers[developerNumber]) {
+               devName.value = developers[developerNumber].name;
+               devWallet.value = developers[developerNumber].recipient;
+           }
+
+           container.insertBefore(row, container.children[0]);
+
+           developerNumber++;
     }
 
-    let smart;
+    function fixateDeveloper(){
+        <!--remove button with text "ADD"-->
+        removeRedundantById('addDeveloper');
 
-    function testSmart(){
-        currentWallet = Waves.Seed.fromExistingPhrase('income desk floor glide act forward pilot poet evoke squirrel circle april pupil razor pole');
-        let devArray = [{recipient:'3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB',amount:0.02 * decimal}];
-        const lenaPubKey = '5XpeKMDVe1AMhuxUdB8dAg1Q26A9XFicvVQohxdcohSb';
-        const inalPubKey = 'EUxurMktqev3KzBPGD5hhMb6GtyGU2u7sTjaz9DoL73Y';
-        const smart = `
-        let lenaPubKey     = base58'${lenaPubKey}'
-        let inalPubKey     = base58'${inalPubKey}'
-        let elephantPubKey = base58'${currentWallet.keyPair.publicKey}'
-
-
-    match tx {
-      case tx:TransferTransaction =>
-        let txRecipient = addressFromRecipient(tx.recipient).bytes
-        if(sigVerify(tx.bodyBytes, tx.proofs[0], elephantPubKey)) then true else false
-      case _ => true
-    }`;
-
-        <!--smart = `let chiefPubKey = base58'5iWWTVEqyPmqvyKGLYbue4yGhTjUM1KSyssaqMeWWQWy'-->
-        <!--let developer0 = '3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB'-->
-        <!--&lt;!&ndash;let developer0 = extract(addressFromString('3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB')).bytes&ndash;&gt;-->
-        <!--match tx { case tx:TransferTransaction =>-->
-        <!--&lt;!&ndash;let txRecipient = addressFromRecipient(tx.recipient).bytes&ndash;&gt;-->
-        <!--if(sigVerify(tx.bodyBytes, tx.proofs[0], chiefPubKey)) then true else false-->
-        <!--&lt;!&ndash;if((developer == txRecipient) && sigVerify(tx.bodyBytes, tx.proofs[0], chiefPubKey)) then true else false&ndash;&gt;-->
-        <!--case _ => true}`;-->
-
-        <!--let container = document.getElementById('container');-->
-        <!--container.textContent = smart;-->
-
-        Waves.API.Node.utils.script.compile(smart).then(compiledScript=>{
-            deploySmartContract(compiledScript);
-        }).catch(e => {
-                document.getElementById('errorMessageId').textContent = e;
-            });;
-    }
-    function testTransfer(){
-            const transferData = {
-            recipient: '3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB',
-            assetId: 'WAVES',
-            amount: decimal * 0.02,
-            feeAssetId: 'WAVES',
-            fee: decimal * 0.005,
-            attachment: '',
-            timestamp: Date.now()
-        };
-        Waves.API.Node.transactions.broadcast(Waves.constants.TRANSFER_TX_NAME, transferData, currentWallet.keyPair);
-
-    }
-
-
-    function createSmartContract(developersArray){
-
-        smart = "let chiefPubKey = base58'${currentWallet.keyPair.publicKey}'";
-        smart += '\n';
-        for(let i = 0; i < developersArray.length;i++){
-            smart += "let developer" + i + " = extract(addressFromString('" + developersArray[i].recipient + "')).bytes";
-            smart += '\n';
+        let i = 0;
+        while(i < developerNumber){
+            disableRedundantById('devName' + i);
+            disableRedundantById('devWallet' + i);
+            disableRedundantById('dev' + i);
+            info(i);
+            i++;
         }
+    }
 
-        smart += "match tx { case tx:TransferTransaction =>";
-        smart += '\n';
-        for(let i = 0; i<developersArray.length; i++){
-            smart += "let txRecipient" + i + " = addressFromRecipient(tx.recipient).bytes";
-             smart += '\n';
+    function clearing(){
+        document.getElementById('logger').textContent = '';
+    }
+
+    function disableRedundantById(id){
+        document.getElementById(id).disabled = true;
+    }
+
+    function removeRedundantById(id){
+         let iElement = document.getElementById(id);
+         iElement.parentNode.removeChild(iElement);
+    }
+
+    function info(message) {
+        let newElement = document.createElement('div');
+        newElement.style.color = 'green';
+        newElement.textContent = 'SUCCESS. ' + message;
+
+        let logger = document.getElementById('logger');
+        logger.insertBefore(newElement, logger.children[0]);
+    }
+
+    function warn(message) {
+        let newElement = document.createElement('div');
+        newElement.style.color = 'red';
+        newElement.textContent = 'ERROR. ' + message;
+
+        let logger = document.getElementById('logger');
+        logger.insertBefore(newElement, logger.children[0]);
+    }
+
+
+     <!--=============================== UI ===================================-->
+
+    <!--++++++++++++++++++++++++++++++++++++ GITHUB +++++++++++++++++++++++++++++++++++++++-->
+
+    const GITHUB = new GitHub();
+
+    function checkRepository(){
+        let profileName = document.getElementById('profileId').value;
+        let repositoryName = document.getElementById('repositoryId').value;
+        GITHUB.getRepo(profileName,repositoryName).getDetails().then((details) => {
+                showWallet();
+                clearing();
+                info('Repository ' + details.data.html_url + ' exists');
+                disableRedundantById("createButtonId");
+                disableRedundantById("profileId");
+                disableRedundantById("repositoryId");
+            }).catch(e => {
+                warn(JSON.stringify(e));
+            });
+    }
+
+    function calculateSalary() {
+        let profileName = document.getElementById('profileId').value;
+        let repositoryName = document.getElementById('repositoryId').value;
+        GITHUB.getRepo(profileName,repositoryName).listCommits().then((commits) => {
+                let total = commits.data.length;
+                for(data of commits.data) {
+                    <!--DEBUG LINE-->
+                    info(data.commit.committer.name + " " + data.commit.author.name + " "  +  data.commit.message);
+
+                    for(author of developers) {
+                        if(author.name === data.commit.committer.name || author.name === data.commit.author.name) {
+                            author.commits++;
+                        }
+
+                    }
+                }
+
+                let moneyTotal = balance;
+                for(author of developers) {
+                    if(author.commits > 0) {
+                        moneyTotal-=0.005;
+                    }
+                }
+                moneyTotal *= 0.1;
+
+                for(author of developers) {
+                    let part = (author.commits / total);
+                    author.amount = (moneyTotal * part).toFixed(3);
+                    info(author.name + ' made ' + author.commits + ' commits (' + (part * 100).toFixed(0)
+                        + '%). Salary is ' + author.amount);
+
+                }
+
+                <!--remove button with text "Calculate Salaries"-->
+                removeRedundantById('calculateSalary');
+
+                let button = document.createElement('button');
+                button.setAttribute('onclick','smartContract()');
+                button.setAttribute('id','buttonSmartContract');
+                button.innerText = 'Create smart contract for protection';
+                document.getElementById('container').appendChild(button);
+
+            }).catch(e => {
+                warn(JSON.stringify(e));
+            });
+    }
+
+    <!--=============================== GITHUB ===================================-->
+
+    <!--++++++++++++++++++++++++++++++++++++ WAVES +++++++++++++++++++++++++++++++++++++++-->
+
+    const DECIMALS = 100000000;
+    const WAVES = WavesAPI.create(WavesAPI.TESTNET_CONFIG);
+
+    let balanceCheckTimer;
+    let currentWallet;
+    let balance;
+
+    function showWallet(key){
+        if(!currentWallet) {
+            currentWallet = WAVES.Seed.create();
         }
+        balanceCheckTimer = setInterval(checkBalance, 1000);
+    }
 
-        smart += "if(";
-        for(let i = 0; i < developersArray.length; i++){
-            smart += "(developer" + i + " == txRecipient" + i + ")";
-            if(i + 1 < developersArray.length){
-            smart += ' ||';
+    function checkBalance(){
+        WAVES.API.Node.addresses.balanceDetails(currentWallet.address).then(balanceDetails => {
+            balance = balanceDetails.available / DECIMALS;
+            if(balance > 0.01) {
+                clearInterval(balanceCheckTimer);
+
+                addDeveloper();
+                addDeveloper();
+
+                let button = document.createElement('button');
+                button.setAttribute('onclick','calculateSalary()');
+                button.setAttribute('id','calculateSalary');
+                button.innerText = 'Calculate Salaries';
+                document.getElementById('container').appendChild(button);
             }
-        }
-        smart += ' && sigVerify(tx.bodyBytes,tx.proofs[0],chiefPubKey)) then true else false';
-         smart += '\n';
-        smart += 'case _ => true';
-
-        let container = document.getElementById('container');
-        container.textContent = smart;
-
-        Waves.API.Node.utils.script.compile(smart).then(compiledScript=>{
-            deploySmartContract(compiledScript);
+            document.getElementById('userWalletId').textContent = 'Wallet address - ' + currentWallet.address;
+            document.getElementById('userBalanceId').textContent =  'Balance - ' + balance + ' Waves';
+            document.getElementById('userSeedId').textContent = 'Seed - ' + currentWallet.phrase;
+        }).catch(e => {
+            clearInterval(balanceCheckTimer);
+            warn(e.message);
         });
     }
 
-    async function deploySmartContract(compiledScript){
-        const setScriptObj = {
-            fee: decimal * 0.005,
-            script: compiledScript,
+    async function smartContract() {
+        let smartContract = `let signature = base58'${currentWallet.keyPair.publicKey}';`
+        for(let index in developers) {
+            smartContract += `let developer` + index + ` = base58'` + developers[index].recipient + `';`;
+        }
+
+        smartContract += `match tx { case tx:TransferTransaction => { let recipient = addressFromRecipient(tx.recipient).bytes; if((`;
+
+        for(let index in developers) {
+            if(index > 0) {
+                smartContract += ` || `;
+            }
+            smartContract += `developer` + index + ` == recipient`;
+        }
+
+        smartContract += `) && sigVerify(tx.bodyBytes, tx.proofs[0], signature)) then true else false } case _ => true }`;
+
+        WAVES.API.Node.utils.script.compile(smartContract).then(compiledContract => {
+            publishContract(compiledContract)
+            clearing();
+            info('Contract compiled.');
+        }).catch(e => warn(e.error));
+    }
+
+    let dataTxResult;
+    async function publishDataTx(){
+        let arrayData = [];
+        for(developer of developers){
+            let data = {
+                key: developer.name,
+                type: 'string',
+                value: developer.amount
+            };
+            arrayData.push(data);
+        }
+
+        const dataTransaction = {
+            sender: currentWallet.address,
+            senderPublicKey: currentWallet.keyPair.publicKey,
+            fee: DECIMALS * 0.005,
+            data: arrayData
+        };
+        const dataTx = await WAVES.tools.createTransaction(WAVES.constants.DATA_TX_NAME, dataTransaction);
+        dataTx.addProof(currentWallet.keyPair.privateKey);
+
+        const dataTxJSON = await dataTx.getJSON();
+        dataTxResult = await WAVES.API.Node.transactions.rawBroadcast(dataTxJSON);
+        showDataTransaction();
+       <!--WAVES.API.Node.transactions-->
+            <!--.broadcast(WAVES.constants.DATA_TX_NAME, dataTransaction, currentWallet.keyPair.privateKey)-->
+            <!--.then(publishedData => {-->
+                <!--info(publishedData);-->
+            <!--});-->
+    }
+
+    function showDataTransaction(){
+       setInterval(timer => {
+        clearing();
+        disableRedundantById('paySalaries');
+        info(JSON.stringify(dataTxResult.data));
+       }, 2000);
+    }
+
+    function publishContract(compiledContract) {
+        const contractTransaction = {
+            fee: DECIMALS * 0.005,
+            script: compiledContract,
             sender: currentWallet.address,
             senderPublicKey: currentWallet.keyPair.publicKey
-            };
-        Waves.API.Node.transactions.broadcast(Waves.constants.SET_SCRIPT_TX_NAME, setScriptObj, currentWallet.keyPair);
+        };
+
+        WAVES.API.Node.transactions
+            .broadcast(WAVES.constants.SET_SCRIPT_TX_NAME, contractTransaction, currentWallet.keyPair)
+            .then(publishedContract => {
+                info('Contract published.');
+
+                <!--remove button with text "Create smart contract for protection"-->
+                removeRedundantById('buttonSmartContract');
+
+                <!--disable input's line for developers-->
+                <!--fixateDeveloper();-->
+
+                let button = document.createElement('button');
+                button.setAttribute('onclick','paySalaries()');
+                button.setAttribute('id','paySalaries');
+                button.innerText = 'Pay Salaries';
+                document.getElementById('container').appendChild(button);
+
+            }).catch(e => warn(e.error));
     }
 
-    async function signTransaction(){
-        let currentBalance;
-        Waves.API.Node.addresses.balanceDetails(currentWallet.address).then(balanceDetails => {
-            currentBalance = balanceDetails.available;
-        });
-
-        for(let i = 0;i<developers;i++){
-            const transferTxObj = Object.assign(Helpers.TX_EXAMPLES.TRANSFER, {
-                recipient: document.getElementById('devWallet' + i).address,
-                amount: decimal * 0.01,
-                sender: currentWallet.address,
-                senderPublicKey: currentWallet.keyPair.publicKey
-            });
-            const transferTx = await Waves.tools.createTransaction(Waves.constants.TRANSFER_TX_NAME, transferTxObj);
-            transferTx.addProof(currentWallet.keyPair.privateKey);
-            const transferTxJSON = await transferTx.getJSON();
+    async function paySalaries(){
+        clearing();
+        for(let developer of developers) {
+            transfer(developer.amount, developer.recipient, currentWallet.keyPair);
         }
-
+        publishDataTx();
     }
-    function transferMoney(){
-        for(let i = 0;i<developers;i++){
-            const transferData = {
-            recipient: document.getElementById('devWallet' + i).address,
+
+    async function transfer(amount, recipient, keyPair){
+        const transferTransaction = {
             assetId: 'WAVES',
-            amount: decimal * 0.02,
             feeAssetId: 'WAVES',
-            fee: decimal * 0.001,
+            fee: DECIMALS * 0.005,
             attachment: '',
+            <!--amount: amount * DECIMALS,-->
+            amount: 0.10 * DECIMALS,
+            recipient: recipient,
             timestamp: Date.now()
         };
-        Waves.API.Node.transactions.broadcast('setScript', transferData, currentWallet.keyPair);
-        }
+
+        const transferred = await WAVES.API.Node.transactions
+            .broadcast(WAVES.constants.TRANSFER_TX_NAME, transferTransaction, keyPair);
+        info(`Waves ${amount} transferred to ${recipient}.`);
     }
+
+
+    <!--========================== WAVES ===============================-->
+
+    <!--++++++++++++++++++++++++TEST+++++++++++++++++++++++++++++-->
+
+    async function testInit(){
+
+        currentWallet = WAVES.Seed.fromExistingPhrase('income desk floor glide act forward pilot poet evoke squirrel circle april pupil razor pole');
+
+        developers = [{recipient:'3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB', amount: 0.02, name : 'Lipnevich', commits: 0},
+                          {recipient:'3NAARTeT8RhcoG1Gr59V2AAPFqhbDULrpjB', amount: 0.02, name : 'VladislawKravchenok', commits : 0 }
+                     ];
+
+        document.getElementById('profileId').value = 'Lipnevich';
+        document.getElementById('repositoryId').value = 'smart-rewarding';
+    }
+
+    async function testSmart(){
+        smartContract();
+    }
+
+    async function testTransfer(){
+        transferToAllDevelopers();
+    }
+
+    <!--============================TEST==============================-->
 
     </script>
 
 </head>
-<body>
+<body onload="testInit()">
 
+
+<!--<button onclick="testTransfer()">test transfer</button>-->
+<!--<button onclick="testSmart()">test smart contract</button>-->
+<!--<button onclick="publishDataTx()">test publish data transaction</button>-->
+<!--<button onclick="showDataTransaction()">test display last data transaction</button>-->
 
 <div align="center">
-    <button onclick="testTransfer()">test transfer</button>
-    <button onclick="testSmart()">test smart</button>
+
     <div id="initRepoId">
         https://github.com/
-        <input type="text" value="VladislawKravchenok" size="20" id="profileId" placeholder="Profile name"/>
+        <input type="text" size="20" id="profileId" placeholder="Profile name"/>
         /
-        <input type="text" value="SolarSystem3" size="20" id="repositoryId" placeholder="Repository name"/>
+        <input type="text" size="20" id="repositoryId" placeholder="Repository name"/>
 
 
         <button onclick="checkRepository()" id="createButtonId">Create wallet</button>
@@ -247,19 +374,9 @@
     <div id="userBalanceId"></div>
     <div id="userSeedId"></div>
 
-    <input type="text" name="key" size="15" id="accountId"
-           placeholder="Ссылка на гит аккаунт работника" hidden/>
+    <div id="container"></div>
+    <div id="logger"></div>
 
-
-
-    <input type="text" name="key" size="15" id="walletId"
-           placeholder="Личный, Waves - кашелёк работника" hidden/>
-
-
-<div id="container"></div>
-<div id="buttonCreateSmartContract"></div>
-<div id="containerTest"></div>
-<div id="errorMessageId" style=" color: red"></div>
 </div>
 </body>
 </html>
