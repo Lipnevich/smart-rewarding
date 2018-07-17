@@ -2,8 +2,8 @@
 <head>
 <meta charset="utf-8">
 <title>Smart Reward</title>
-<script src="./node_modules/@waves/waves-api/dist/waves-api.min.js"></script>
-<script src="./node_modules/github-api/dist/GitHub.bundle.min.js"></script>
+<script src="vendor/waves-api.min.js"></script>
+<script src="vendor/GitHub.bundle.min.js"></script>
 <script>
 
     <!--++++++++++++++++++++++++++++++++++++ UI +++++++++++++++++++++++++++++++++++++++-->
@@ -108,8 +108,8 @@
                 }
 
                 let button = document.createElement('button');
-                button.setAttribute('onclick','paySalaries()');
-                button.innerText = 'Pay Salaries';
+                button.setAttribute('onclick','smartContract()');
+                button.innerText = 'Create smart contract for protection';
                 document.getElementById('container').appendChild(button);
 
             }).catch(e => {
@@ -191,7 +191,15 @@
 
         WAVES.API.Node.transactions
             .broadcast(WAVES.constants.SET_SCRIPT_TX_NAME, contractTransaction, currentWallet.keyPair)
-            .then(publishedContract => info('Contract published.')).catch(e => warn(e.error));
+            .then(publishedContract => {
+                info('Contract published.');
+
+                let button = document.createElement('button');
+                button.setAttribute('onclick','paySalaries()');
+                button.innerText = 'Pay Salaries';
+                document.getElementById('container').appendChild(button);
+
+            }).catch(e => warn(e.error));
     }
 
     async function paySalaries(){
