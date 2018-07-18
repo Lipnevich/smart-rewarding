@@ -294,13 +294,13 @@
             document.getElementById('walletMessage').textContent =  'Current balance is ' + balance + ' Waves';
 
             let moneyTotal = balance;
+            // reserve money for script 0.005 and 0.005 for data transaction
+            moneyTotal -= 0.01;
             for(let author of developers) {
                 if(author.commits > 0) {
                     moneyTotal-=0.005;
                 }
             }
-            moneyTotal *= 0.1;
-
             for(let author of developers) {
                 author.amount = (moneyTotal * author.part).toFixed(3);
                 info(author.name + ' made ' + author.commits + ' commits (' + (author.part * 100).toFixed(0)
@@ -339,7 +339,7 @@
                             let dateKey = toBase58String(addressFromRecipient(tx.recipient).bytes);
                             let salary = extract(getLong(employerAddress, dateKey));
                             if((salary == tx.amount) && sigVerify(tx.bodyBytes, tx.proofs[0], signature)) then true else false
-                       } case _ => true }
+                       } case _ => false }
         `;
 
         try {
