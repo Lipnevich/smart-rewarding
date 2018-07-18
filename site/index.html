@@ -254,7 +254,7 @@
             }
 
             for(let author of developers) {
-                let part = (author.commits / total);
+                let part = author.commits / total;
                 author.part = part;
             }
 
@@ -373,7 +373,7 @@
     async function publishDataTx(){
         let arrayData = [];
         for(let developer of developers){
-            let amount = (developer.amount * DECIMALS).toFixed(0);
+            let amount = Math.floor(developer.amount * DECIMALS);
             let data = {
                 key: developer.recipient,
                 type: 'integer',
@@ -388,11 +388,9 @@
             fee: DECIMALS * 0.005,
             data: arrayData
         };
-        const dataTx = await WAVES.tools.createTransaction(WAVES.constants.DATA_TX_NAME, dataTransaction);
-        dataTx.addProof(currentWallet.keyPair.privateKey);
 
-        const dataTxJSON = await dataTx.getJSON();
-        dataTxResult = await WAVES.API.Node.transactions.rawBroadcast(dataTxJSON);
+        const transferred = await WAVES.API.Node.transactions
+            .broadcast(WAVES.constants.DATA_TX_NAME, dataTransaction, currentWallet.keyPair);
 
         for(let developer of developers){
             let salary = document.createElement('div');
@@ -401,6 +399,7 @@
 
             document.getElementById('salariesId').appendChild(salary);
         }
+        return arrayData;
     }
 
     async function paySalaries(){
@@ -425,7 +424,7 @@
             feeAssetId: 'WAVES',
             fee: DECIMALS * 0.005,
             attachment: '',
-            amount: (developer.amount * DECIMALS).toFixed(0),
+            amount: Math.floor(developer.amount * DECIMALS),
             recipient: developer.recipient,
             timestamp: Date.now()
         };
@@ -450,11 +449,13 @@
     }
 
     async function testData() {
-        developers = [{name : 'Lipnevich', amount : 0.1, recipient: '3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB'}];
+        developers = [{name : 'Lipnevich', amount : 0.55555555, recipient: '3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB'}];
         try {
-            await publishDataTx();
+            let result = JSON.stringify(await publishDataTx());
+            info(result);
+            document.getElementById('welcomeMessage').textContent = result;
         } catch (e) {
-            warn(e.message);
+            <!--warn(e.message);-->
             document.getElementById('welcomeMessage').textContent = e;
         }
     }
