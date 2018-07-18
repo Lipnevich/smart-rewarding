@@ -51,7 +51,7 @@
 
 
     <div class="navigation">
-        <a id="test" style="background: green;" onclick="testData()">TEST</a>
+        <!--<a id="test" style="background: green;" onclick="testData()">TEST</a>-->
         <a id="prevBtn" onclick="this.disabled=true;nextPrev(-1)"></a>
         <a id="nextBtn" onclick="this.disabled=true;nextPrev(1)"></a>
     </div>
@@ -328,24 +328,19 @@
     }
 
     async function smartContract(messageElement) {
-        let smartContract = `let signature = base58'${currentWallet.keyPair.publicKey}';`;
-        for(let index in developers) {
-            smartContract += `let developer` + index + ` = base58'` + developers[index].recipient + `';`;
-        }
-        smartContract += `match tx { case tx:TransferTransaction => { let recipient = addressFromRecipient(tx.recipient).bytes;`;
-        // TODO (vla) extract integer
-        <!--smartContract += `let salary = extract(getInteger(addressFromPublicKey(tx.senderPk), "Lipnevich"));`;-->
-        smartContract += `let salary = 0;`;
-        smartContract += `if((`;
-        for(let index in developers) {
-            if(index > 0) {
-                smartContract += ` || `;
-            }
-            smartContract += `developer` + index + ` == recipient`;
-        }
-        <!--smartContract += `) && sigVerify(tx.bodyBytes, tx.proofs[0], signature)) then true else false } case _ => true }`;-->
+        await publishDataTx();
 
-        smartContract += `) && (salary == 0 || salary == tx.amount) && sigVerify(tx.bodyBytes, tx.proofs[0], signature)) then true else false } case _ => true }`;
+        let smartContract = `
+            let signature = base58'${currentWallet.keyPair.publicKey}';
+
+            match tx { case tx:TransferTransaction =>
+                       {
+                            let employerAddress = addressFromPublicKey(tx.senderPk);
+                            let dateKey = toBase58String(addressFromRecipient(tx.recipient).bytes);
+                            let salary = extract(getLong(employerAddress, dateKey));
+                            if((salary == tx.amount) && sigVerify(tx.bodyBytes, tx.proofs[0], signature)) then true else false
+                       } case _ => true }
+        `;
 
         try {
             messageElement.textContent = 'Compiling Waves smart contract. Please wait...';
@@ -362,7 +357,7 @@
             let publishedContract = await WAVES.API.Node.transactions
                 .broadcast(WAVES.constants.SET_SCRIPT_TX_NAME, contractTransaction, currentWallet.keyPair);
             messageElement.textContent = 'Publishing Data in Waves Blockchain. Please wait...';
-            await publishDataTx();
+
             messageElement.textContent = '';
 
             return true;
@@ -445,7 +440,7 @@
     let preWallet = ['3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB', '3Mxhn7bk9qcYv7E2Lgct2oPSUYiGWN7iB3x'];
 
     async function testInit(){
-        currentWallet = WAVES.Seed.fromExistingPhrase('income desk floor glide act forward pilot poet evoke squirrel circle april pupil razor pole');
+        <!--currentWallet = WAVES.Seed.fromExistingPhrase('income desk floor glide act forward pilot poet evoke squirrel circle april pupil razor pole');-->
 
         document.getElementById('profileId').value = 'Lipnevich';
         document.getElementById('repositoryId').value = 'smart-rewarding';
@@ -454,8 +449,9 @@
     async function testData() {
         developers = [{name : 'Lipnevich', amount : 0.55555555, recipient: '3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB'}];
         try {
-            await smartContract(document.getElementById('welcomeMessage'));
-            await paySalaries(document.getElementById('welcomeMessage'));
+            <!--await publishDataTx();-->
+            <!--await smartContract(document.getElementById('welcomeMessage'));-->
+            <!--await paySalaries(document.getElementById('welcomeMessage'));-->
         } catch (e) {
             warn(e.message);
             document.getElementById('welcomeMessage').textContent = e;
