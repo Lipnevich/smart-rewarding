@@ -16,6 +16,7 @@
         <p>We are happy to introduce Smart Salary Processor for Software developers. It manages salary payments for your employees according to their productivity</p>
         <p>All you have to do is provide GitHub repository name, developers Waves wallets, and amount of money you want to spend on salaries
         <p>Smart salary processor will check amount of commits of each of developer and spread provided money in proportion of completed job with transactions protected by Waves smart contract</p>
+        <p id="welcomeMessage"></p>
     </div>
 
     <div class="tab">
@@ -50,6 +51,7 @@
 
 
     <div class="navigation">
+        <a id="test" style="background: green;" onclick="testData()">TEST</a>
         <a id="prevBtn" onclick="this.disabled=true;nextPrev(-1)"></a>
         <a id="nextBtn" onclick="this.disabled=true;nextPrev(1)"></a>
     </div>
@@ -73,57 +75,58 @@
     showTab(0);
 
     async function showTab(tabIndex) {
-      var tabs = document.getElementsByClassName("tab");
-      tabs[tabIndex].style.display = "block";
+      var tabs = document.getElementsByClassName('tab');
+      tabs[tabIndex].style.display = 'block';
 
-      document.getElementById("nextBtn").disabled = false;
-      document.getElementById("prevBtn").disabled = false;
-      document.getElementById("nextBtn").style.display = "inline";
-      document.getElementById("prevBtn").style.display = "inline";
-      document.getElementById("nextBtn").style.background = '#ffa100';
-      document.getElementById("prevBtn").textContent = "Previous";
+      document.getElementById('nextBtn').disabled = false;
+      document.getElementById('prevBtn').disabled = false;
+      document.getElementById('nextBtn').style.display = 'inline';
+      document.getElementById('prevBtn').style.display = 'inline';
+      document.getElementById('nextBtn').style.background = '#ffa100';
+      document.getElementById('prevBtn').textContent = 'Previous';
 
       if (tabIndex == 0) {
-        document.getElementById("prevBtn").style.display = "none";
-        document.getElementById("nextBtn").textContent = "Start";
+        document.getElementById('prevBtn').style.display = 'none';
+        document.getElementById('nextBtn').textContent = 'Start';
       } else if (tabIndex == (tabs.length - 1)) {
-        document.getElementById("nextBtn").style.background = '#039be5';
-        document.getElementById("nextBtn").textContent = "Pay Salaries";
+        document.getElementById('nextBtn').style.background = '#039be5';
+        document.getElementById('nextBtn').textContent = 'Pay Salaries';
       } else {
-        document.getElementById("nextBtn").textContent = "Next";
+        document.getElementById('nextBtn').textContent = 'Next';
       }
 
       fixStepIndicator(tabIndex);
     }
 
     function fixStepIndicator(stepIndex) {
-      let steps = document.getElementsByClassName("step");
+      let steps = document.getElementsByClassName('step');
       for (let step of steps) {
-        step.className = step.className.replace(" active", "");
+        step.className = step.className.replace(' active', '');
       }
-      steps[stepIndex].className += " active";
+      steps[stepIndex].className += ' active';
     }
 
     async function validateTab() {
       if(progress > currentTab) return true;
       let valid = true;
-      let tabs = document.getElementsByClassName("tab");
-      inputs = tabs[currentTab].getElementsByTagName("input");
+      let tabs = document.getElementsByClassName('tab');
+      inputs = tabs[currentTab].getElementsByTagName('input');
       for (let input of inputs) {
-        if (input.value == "") {
-          input.className += " invalid";
+        if (input.value == '') {
+          input.className += ' invalid';
           valid = false;
         }
       }
 
-      switch(currentTab) {
-        case 1 : valid = await checkRepository();  break;
-        case 2 : valid = balance >= 0.01; break;
-        case 3 : valid = await smartContract(); break;
-        case 4 : valid = await paySalaries(); break;
-      }
-
       if (valid) {
+          switch(currentTab) {
+            case 1 : valid = await checkRepository();  break;
+            case 2 : valid = balance >= 0.01; break;
+            case 3 : valid = await smartContract(); break;
+            case 4 : valid = await paySalaries(); break;
+          }
+
+
             progress++;
             for (let input of inputs) {
               input.disabled = true;
@@ -133,13 +136,13 @@
     }
 
     async function nextPrev(n) {
-      let tabs = document.getElementsByClassName("tab");
+      let tabs = document.getElementsByClassName('tab');
       if (n == 1 && !await validateTab()) return false;
       if((currentTab + n) == tabs.length) {
-        document.getElementById("nextBtn").disabled = true;
+        document.getElementById('nextBtn').disabled = true;
         return false;
       }
-      tabs[currentTab].style.display = "none";
+      tabs[currentTab].style.display = 'none';
       currentTab = currentTab + n;
       showTab(currentTab);
     }
@@ -225,6 +228,9 @@
                 message.textContent = 'Repository with no commits. Please start developing first';
                 return false;
             }
+            if(names.size == developers.length) {
+                return true;
+            }
 
             let index = 0;
             for(let name of names) {
@@ -237,7 +243,7 @@
 
             let total = commits.data.length - 1;
             for(let data of commits.data) {
-                info(data.commit.committer.name + " " + data.commit.author.name + " "  +  data.commit.message);
+                info(data.commit.committer.name + ' ' + data.commit.author.name + ' '  +  data.commit.message);
 
                 for(let author of developers) {
                     if(author.name === data.commit.committer.name) {
@@ -370,7 +376,7 @@
             let amount = (developer.amount * DECIMALS).toFixed(0);
             let data = {
                 key: developer.recipient,
-                type: 'string',
+                type: 'integer',
                 value: amount
             };
             arrayData.push(data);
@@ -401,11 +407,11 @@
         for(let developer of developers) {
             document.getElementById('salariesMessage').textContent = 'Sending salary to ' + developer.name + '. Please wait...';
             try {
-                await transfer(developer.amount, developer.recipient, currentWallet.keyPair);
-                info('Salary was sent to ' + developer.name + ' ' + developer.amount + ' Waves');
+                await transfer(developer, currentWallet.keyPair);
             } catch (e) {
-                return false;
                 warn(e.error);
+                document.getElementById('salariesMessage').textContent = e;
+                return false;
             }
         }
         document.getElementById('salariesMessage').textContent = 'Salaries were sent. Thanks for choosing us';
@@ -413,20 +419,20 @@
         return true;
     }
 
-    async function transfer(amount, recipient, keyPair){
+    async function transfer(developer, keyPair){
         const transferTransaction = {
             assetId: 'WAVES',
             feeAssetId: 'WAVES',
             fee: DECIMALS * 0.005,
             attachment: '',
-            amount: (amount * DECIMALS).toFixed(0),
-            recipient: recipient,
+            amount: (developer.amount * DECIMALS).toFixed(0),
+            recipient: developer.recipient,
             timestamp: Date.now()
         };
 
         const transferred = await WAVES.API.Node.transactions
             .broadcast(WAVES.constants.TRANSFER_TX_NAME, transferTransaction, keyPair);
-        info(`Waves ${amount} transferred to ${recipient}.`);
+        info(`Waves ${developer.amount} transferred to ${developer.recipient}.`);
     }
 
 
@@ -441,6 +447,16 @@
 
         document.getElementById('profileId').value = 'Lipnevich';
         document.getElementById('repositoryId').value = 'smart-rewarding';
+    }
+
+    async function testData() {
+        developers = [{name : 'Lipnevich', amount : 0.1, recipient: '3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB'}];
+        try {
+            await publishDataTx();
+        } catch (e) {
+            warn(e.message);
+            document.getElementById('welcomeMessage').textContent = e;
+        }
     }
 
     <!--============================TEST==============================-->
