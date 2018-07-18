@@ -15,7 +15,7 @@
 
         <p>We are happy to introduce Smart Salary Processor for Software developers. It manages salary payments for your employees according to their productivity</p>
         <p>All you have to do is provide GitHub repository name, developers Waves wallets, and amount of money you want to spend on salaries
-        <p>Smart salary processor will check amount of commits of each of developer and spread provided money in proportion of completed job with transactions protected by Waves smart contracts</p>
+        <p>Smart salary processor will check amount of commits of each of developer and spread provided money in proportion of completed job with transactions protected by Waves smart contract</p>
     </div>
 
     <div class="tab">
@@ -155,12 +155,15 @@
             member.appendChild(devDesc);
 
             let devWallet = document.createElement('input');
-            devWallet.setAttribute('placeholder','Developer wallet');
+            devWallet.setAttribute('placeholder', developer.name + ' wallet');
             devWallet.setAttribute('id','devWallet' + developerIndex);
             devWallet.value = developer.recipient;
             member.appendChild(devWallet);
 
-            document.getElementById('teamId').appendChild(member);
+            let team = document.getElementById('teamId');
+            if(team.children.length <= developers.length) {
+                team.appendChild(member);
+            }
         }
     }
 
@@ -299,8 +302,9 @@
             }
 
         } else if(balance >= 0) {
+
             document.getElementById('walletMessage').textContent = 'Current balance is '
-                + balance + ' Waves. Please send at least ' + (0.01 - balance) + '0.01 Waves for creating smart contract';
+                + balance + ' Waves. Please send at least ' + ((0.005 * developers.length + 0.01) - balance) + ' Waves for creating smart contract';
             setTimeout(checkBalance, 1000);
         } else {
             document.getElementById('walletMessage').textContent = 'Checking balance. Please wait...';
