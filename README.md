@@ -1,10 +1,9 @@
 # smart-rewarding
-Smart rewarding project for Waves online hackaton
-
-https://forum.wavesplatform.com/t/smart-rewarding/1024
+Smart rewarding project for [Waves online hackaton](https://forum.wavesplatform.com/t/smart-rewarding/1024)
 
 Actual smart contract:
 
+```javascript
 let signature = base58'${currentWallet.keyPair.publicKey}';
 
 match tx { case tx:TransferTransaction =>
@@ -18,5 +17,6 @@ match tx { case tx:TransferTransaction =>
 
     } case _ => false
 }
+```
 
-Online demo https://smart-rewarding.firebaseapp.com/
+[Online demo](https://smart-rewarding.firebaseapp.com/)
