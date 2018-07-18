@@ -122,8 +122,8 @@
           switch(currentTab) {
             case 1 : valid = await checkRepository();  break;
             case 2 : valid = balance >= 0.01; break;
-            case 3 : valid = await smartContract(); break;
-            case 4 : valid = await paySalaries(); break;
+            case 3 : valid = await smartContract(document.getElementById('teamMessage')); break;
+            case 4 : valid = await paySalaries(document.getElementById('salariesMessage')); break;
           }
 
 
@@ -327,12 +327,15 @@
         });
     }
 
-    async function smartContract() {
+    async function smartContract(messageElement) {
         let smartContract = `let signature = base58'${currentWallet.keyPair.publicKey}';`;
         for(let index in developers) {
             smartContract += `let developer` + index + ` = base58'` + developers[index].recipient + `';`;
         }
         smartContract += `match tx { case tx:TransferTransaction => { let recipient = addressFromRecipient(tx.recipient).bytes;`;
+        // TODO (vla) extract integer
+        <!--smartContract += `let salary = extract(getInteger(addressFromPublicKey(tx.senderPk), "Lipnevich"));`;-->
+        smartContract += `let salary = 0;`;
         smartContract += `if((`;
         for(let index in developers) {
             if(index > 0) {
@@ -340,12 +343,12 @@
             }
             smartContract += `developer` + index + ` == recipient`;
         }
-        smartContract += `) && sigVerify(tx.bodyBytes, tx.proofs[0], signature)) then true else false } case _ => true }`;
+        <!--smartContract += `) && sigVerify(tx.bodyBytes, tx.proofs[0], signature)) then true else false } case _ => true }`;-->
 
-        <!--smartContract += `) && salary == tx.amount && sigVerify(tx.bodyBytes, tx.proofs[0], signature)) then true else false } case _ => true }`;-->
+        smartContract += `) && (salary == 0 || salary == tx.amount) && sigVerify(tx.bodyBytes, tx.proofs[0], signature)) then true else false } case _ => true }`;
 
         try {
-            document.getElementById('teamMessage').textContent = 'Compiling Waves smart contract. Please wait...';
+            messageElement.textContent = 'Compiling Waves smart contract. Please wait...';
             let compiledContract = await WAVES.API.Node.utils.script.compile(smartContract);
 
             const contractTransaction = {
@@ -355,16 +358,16 @@
                 senderPublicKey: currentWallet.keyPair.publicKey
             };
 
-            document.getElementById('teamMessage').textContent = 'Publishing Waves smart contract. Please wait...';
+            messageElement.textContent = 'Publishing Waves smart contract. Please wait...';
             let publishedContract = await WAVES.API.Node.transactions
                 .broadcast(WAVES.constants.SET_SCRIPT_TX_NAME, contractTransaction, currentWallet.keyPair);
-            document.getElementById('teamMessage').textContent = 'Publishing Data in Waves Blockchain. Please wait...';
+            messageElement.textContent = 'Publishing Data in Waves Blockchain. Please wait...';
             await publishDataTx();
-            document.getElementById('teamMessage').textContent = '';
+            messageElement.textContent = '';
 
             return true;
         } catch (e) {
-            document.getElementById('teamMessage').textContent = e ;
+            messageElement.textContent = e ;
             warn(e.error);
             return false;
         }
@@ -402,18 +405,18 @@
         return arrayData;
     }
 
-    async function paySalaries(){
+    async function paySalaries(messageContainer){
         for(let developer of developers) {
-            document.getElementById('salariesMessage').textContent = 'Sending salary to ' + developer.name + '. Please wait...';
+            messageContainer.textContent = 'Sending salary to ' + developer.name + '. Please wait...';
             try {
                 await transfer(developer, currentWallet.keyPair);
             } catch (e) {
                 warn(e.error);
-                document.getElementById('salariesMessage').textContent = e;
+                messageContainer.textContent = e;
                 return false;
             }
         }
-        document.getElementById('salariesMessage').textContent = 'Salaries were sent. Thanks for choosing us';
+        messageContainer.textContent = 'Salaries were sent. Thanks for choosing us';
         showBalance();
         return true;
     }
@@ -451,11 +454,10 @@
     async function testData() {
         developers = [{name : 'Lipnevich', amount : 0.55555555, recipient: '3NA1cH18k2tpbLewPJWNTVuR3LVjCyerSgB'}];
         try {
-            let result = JSON.stringify(await publishDataTx());
-            info(result);
-            document.getElementById('welcomeMessage').textContent = result;
+            await smartContract(document.getElementById('welcomeMessage'));
+            await paySalaries(document.getElementById('welcomeMessage'));
         } catch (e) {
-            <!--warn(e.message);-->
+            warn(e.message);
             document.getElementById('welcomeMessage').textContent = e;
         }
     }
