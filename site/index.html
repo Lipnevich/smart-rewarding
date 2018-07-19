@@ -4,6 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Smart Reward</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="icon/salary.png">
     <script src="js/waves-api.min.js"></script>
     <script src="js/GitHub.bundle.min.js"></script>
 </head>
@@ -32,7 +33,7 @@
 
     <div class="tab">
         <p>Waves wallet for <a target="_blank" id="repositoryLink">your GitHub repository</a>:</p>
-        <div class="code" id="walletId"></div>
+        <div><p class="code" id="walletId"></p><img src="icon/refresh.png" onclick="refreshWallet()"></div>
         <p id="walletMessage"></p>
     </div>
 
@@ -43,9 +44,16 @@
     </div>
 
     <div class="tab">
+        <p>Please enter salary amount for whole team</p>
+        <p id="calculationId"><input placeholder="Lets make your team happy!" id="salaryAmountId" /> Waves</p>
+        <p id="calculationMessage"></p>
+    </div>
+
+    <div class="tab">
         <p><a target="_blank" id="contractLink">Waves smart contract</a> that allows transfer money to your developers only</p>
         <p>Wallets for your developers and salary amounts stored in <a target="_blank" id="dataLink">Waves blockchain</a></p>
-        <p id="salariesId"></p>
+        <p></p>
+        <div><p id="salariesId"></p><img src="icon/refresh.png" id="salariesRefresher" onclick="refreshSalaries()"></div>
         <p id="salariesMessage"></p>
     </div>
 
@@ -57,6 +65,7 @@
     </div>
 
     <div class="steps">
+        <span class="step"></span>
         <span class="step"></span>
         <span class="step"></span>
         <span class="step"></span>
@@ -120,12 +129,12 @@
 
       if (valid) {
           switch(currentTab) {
-            case 1 : valid = await checkRepository();  break;
-            case 2 : valid = balance >= 0.01; break;
-            case 3 : valid = await smartContract(document.getElementById('teamMessage')); break;
-            case 4 : valid = await paySalaries(document.getElementById('salariesMessage')); break;
+            case 1 : valid = await checkRepository(document.getElementById('repositoryMessage'));  break;
+            case 2 : valid = await refreshWallet(); break;
+            case 3 : valid = await calculateSalaries(document.getElementById('calculationMessage')); break;
+            case 4 : valid = await createSmartContract(document.getElementById('teamMessage')); break;
+            case 5 : valid = await paySalaries(document.getElementById('salariesMessage')); break;
           }
-
 
             progress++;
             for (let input of inputs) {
@@ -149,23 +158,24 @@
 
     let developers = [];
     function showTeam() {
-        for(let developerIndex in developers) {
-            let developer = developers[developerIndex];
-            let member = document.createElement('p');
+        for(let developer of developers) {
+            let memberKey = 'developerNameAndWallet' + developer.name;
+            let member = document.getElementById(memberKey);
+            if(!member) {
+                member = document.createElement('p');
+                member.setAttribute('id', memberKey);
 
-            let devDesc = document.createElement('div');
-            devDesc.textContent = developer.name + ' (' + (developer.part * 100).toFixed(0) + '%) ';
-            member.appendChild(devDesc);
+                let devDesc = document.createElement('div');
+                devDesc.textContent = developer.name + ' (' + (developer.part * 100).toFixed(0) + '%) ';
+                member.appendChild(devDesc);
 
-            let devWallet = document.createElement('input');
-            devWallet.setAttribute('placeholder', developer.name + ' wallet');
-            devWallet.setAttribute('id','devWallet' + developerIndex);
-            devWallet.value = developer.recipient;
-            member.appendChild(devWallet);
+                let devWallet = document.createElement('input');
+                devWallet.setAttribute('placeholder', developer.name + ' wallet');
+                devWallet.setAttribute('id','devWallet' + developer.name);
+                devWallet.value = developer.recipient;
+                member.appendChild(devWallet);
 
-            let team = document.getElementById('teamId');
-            if(team.children.length <= developers.length) {
-                team.appendChild(member);
+                document.getElementById('teamId').appendChild(member);
             }
         }
     }
@@ -207,9 +217,8 @@
 
     const GITHUB = new GitHub();
 
-    async function checkRepository() {
-        let message = document.getElementById('repositoryMessage');
-        message.textContent = 'Checking repository. Please wait...';
+    async function checkRepository(messageElement) {
+        messageElement.textContent = 'Checking repository. Please wait...';
         let profileName = document.getElementById('profileId').value;
         let repositoryName = document.getElementById('repositoryId').value;
 
@@ -225,7 +234,7 @@
                 }
             }
             if(names.size == 0) {
-                message.textContent = 'Repository with no commits. Please start developing first';
+                messageElement.textContent = 'Repository with no commits. Please start developing first';
                 return false;
             }
             if(names.size == developers.length) {
@@ -234,7 +243,7 @@
 
             let index = 0;
             for(let name of names) {
-                let developer = {name : name, recipient : '', commits: 0};
+                let developer = {name : name, recipient : '', commits: 0, amount : 0};
                 if(preWallet[index]) developer.recipient = preWallet[index];
                 developers.push(developer);
                 index++;
@@ -243,8 +252,6 @@
 
             let total = commits.data.length - 1;
             for(let data of commits.data) {
-                info(data.commit.committer.name + ' ' + data.commit.author.name + ' '  +  data.commit.message);
-
                 for(let author of developers) {
                     if(author.name === data.commit.committer.name) {
                         author.commits++;
@@ -258,13 +265,14 @@
                 author.part = part;
             }
 
-            message.textContent = '';
+            messageElement.textContent = '';
             showTeam();
             processWallet();
             return true;
         } catch(e) {
-            message.textContent = e;
+            messageElement.textContent = e;
             warn(JSON.stringify(e.response.status + ' ' + e.response.statusText));
+            return false;
         };
     }
 
@@ -275,9 +283,12 @@
     const DECIMALS = 100000000;
     const WAVES = WavesAPI.create(WavesAPI.TESTNET_CONFIG);
     const WAVES_EXPLORER_LINK = 'https://testnet.wavesexplorer.com/address/';
+    const WAVES_FEE = 0.005;
+    const DATA_AND_CONTRACT_FEE = WAVES_FEE * 2;
 
     let currentWallet;
-    let balance = -1;
+    let balance = 0;
+    let salariesAmount = 0;
 
     async function processWallet(key){
         if(!currentWallet) {
@@ -286,68 +297,100 @@
         document.getElementById('walletId').textContent = currentWallet.address;
         document.getElementById('contractLink').href = WAVES_EXPLORER_LINK + currentWallet.address;
         document.getElementById('dataLink').href = WAVES_EXPLORER_LINK + currentWallet.address;
-        showBalance();
+
+        refreshWallet();
     }
 
-    function showBalance() {
-        if(balance >= 0.01) {
-            document.getElementById('walletMessage').textContent =  'Current balance is ' + balance + ' Waves';
+    async function refreshWallet() {
+        let messageElement = document.getElementById('walletMessage');
+        let requiredMoney = DATA_AND_CONTRACT_FEE;
+        let purpose = 'data and smart contract creation';
+        return await checkBalance(messageElement, requiredMoney, purpose);
+    }
 
-            let moneyTotal = balance;
-            // reserve money for script 0.005 and 0.005 for data transaction
-            moneyTotal -= 0.01;
+    async function refreshSalaries() {
+        let messageElement = document.getElementById('salariesMessage');
+        let requiredMoney = salariesAmount;
+        let purpose = 'salary payment';
+        await checkBalance(messageElement, requiredMoney, purpose);
+    }
+
+    async function checkBalance(messageElement, requiredMoney, purpose){
+        try {
+            messageElement.textContent = 'Checking balance. Please wait...';
+            let balanceDetails = await WAVES.API.Node.addresses.balanceDetails(currentWallet.address);
+
+            balance = balanceDetails.available / DECIMALS;
+            messageElement.textContent =  'Current balance is ' + balance + ' Waves.';
+
+            if(balance < requiredMoney) {
+                messageElement.textContent += ' Please send '
+                    + (requiredMoney - balance) + ' Waves for ' + purpose;
+                return false;
+            }
+            return true;
+        } catch(e) {
+            messageElement.textContent = e.message;
+            warn(e.message);
+            return false;
+        };
+    }
+
+    function calculateSalaries(messageElement){
+        salariesAmount = document.getElementById('salaryAmountId').value;
+
+        if(salariesAmount >= DATA_AND_CONTRACT_FEE + (developers.length * WAVES_FEE)) {
+            let moneyTotal = salariesAmount;
+            moneyTotal -= DATA_AND_CONTRACT_FEE;
             for(let author of developers) {
-                if(author.commits > 0) {
-                    moneyTotal-=0.005;
+                moneyTotal -= WAVES_FEE;
+            }
+            for(let author of developers) {
+                author.amount = (moneyTotal * author.part).toFixed(5);
+            }
+            for(let developer of developers){
+                let salaryId = 'salaryForDeveloper' + developer.name;
+                let salary = document.getElementById(salaryId);
+                if(!salary) {
+                    salary = document.createElement('div');
+                    salary.setAttribute('id', salaryId);
+                    salary.setAttribute('class', 'code');
+
+                    salaries = document.getElementById('salariesId');
+                    salaries.insertBefore(salary, salaries.firstChild);
                 }
+                salary.textContent = 'Salary for ' + developer.name + ' is ' + developer.amount + ' Waves';
             }
-            for(let author of developers) {
-                author.amount = (moneyTotal * author.part).toFixed(3);
-                info(author.name + ' made ' + author.commits + ' commits (' + (author.part * 100).toFixed(0)
-                    + '%). Salary is ' + author.amount);
-            }
-
-        } else if(balance >= 0) {
-
-            document.getElementById('walletMessage').textContent = 'Current balance is '
-                + balance + ' Waves. Please send at least ' + ((0.005 * developers.length + 0.01) - balance) + ' Waves for creating smart contract';
-            setTimeout(checkBalance, 1000);
+            messageElement.textContent = '';
+            return true;
         } else {
-            document.getElementById('walletMessage').textContent = 'Checking balance. Please wait...';
-            setTimeout(checkBalance, 1000);
+            messageElement.textContent = 'Salary should be positive. Negative amount makes your developers unhappy';
+            return false;
         }
     }
 
-    function checkBalance(){
-        WAVES.API.Node.addresses.balanceDetails(currentWallet.address).then(balanceDetails => {
-            balance = balanceDetails.available / DECIMALS;
-            showBalance();
-        }).catch(e => {
-            warn(e.message);
-        });
-    }
-
-    async function smartContract(messageElement) {
-        await publishDataTx();
-
-        let smartContract = `
-            let signature = base58'${currentWallet.keyPair.publicKey}';
-
-            match tx { case tx:TransferTransaction =>
-                       {
-                            let employerAddress = addressFromPublicKey(tx.senderPk);
-                            let dateKey = toBase58String(addressFromRecipient(tx.recipient).bytes);
-                            let salary = extract(getLong(employerAddress, dateKey));
-                            if((salary == tx.amount) && sigVerify(tx.bodyBytes, tx.proofs[0], signature)) then true else false
-                       } case _ => false }
-        `;
-
+    async function createSmartContract(messageElement) {
         try {
+            messageElement.textContent = 'Storing data in Waves blockchain. Please wait...';
+            await publishDataTx(messageElement);
+
+            let smartContract = `
+                let signature = base58'${currentWallet.keyPair.publicKey}';
+
+                match tx { case tx:TransferTransaction =>
+                           {
+                                let employerAddress = addressFromPublicKey(tx.senderPk);
+                                let dateKey = toBase58String(addressFromRecipient(tx.recipient).bytes);
+                                let salary = extract(getLong(employerAddress, dateKey));
+                                if((salary == tx.amount) && sigVerify(tx.bodyBytes, tx.proofs[0], signature)) then true else false
+                           } case _ => false }
+            `;
+
             messageElement.textContent = 'Compiling Waves smart contract. Please wait...';
             let compiledContract = await WAVES.API.Node.utils.script.compile(smartContract);
 
             const contractTransaction = {
-                fee: DECIMALS * 0.005,
+                fee: DECIMALS * WAVES_FEE,
                 script: compiledContract,
                 sender: currentWallet.address,
                 senderPublicKey: currentWallet.keyPair.publicKey
@@ -359,7 +402,7 @@
             messageElement.textContent = 'Publishing Data in Waves Blockchain. Please wait...';
 
             messageElement.textContent = '';
-
+            refreshSalaries();
             return true;
         } catch (e) {
             messageElement.textContent = e ;
@@ -383,24 +426,22 @@
         const dataTransaction = {
             sender: currentWallet.address,
             senderPublicKey: currentWallet.keyPair.publicKey,
-            fee: DECIMALS * 0.005,
+            fee: DECIMALS * WAVES_FEE,
             data: arrayData
         };
 
         const transferred = await WAVES.API.Node.transactions
             .broadcast(WAVES.constants.DATA_TX_NAME, dataTransaction, currentWallet.keyPair);
 
-        for(let developer of developers){
-            let salary = document.createElement('div');
-            salary.setAttribute('class','code');
-            salary.textContent = 'Salary for ' + developer.name + ' is ' + developer.amount + ' Waves';
-
-            document.getElementById('salariesId').appendChild(salary);
-        }
         return arrayData;
     }
 
     async function paySalaries(messageContainer){
+        if(balance < salariesAmount) {
+            messageContainer.textContent = 'Not enough money for salary'
+            return false;
+        }
+
         for(let developer of developers) {
             messageContainer.textContent = 'Sending salary to ' + developer.name + '. Please wait...';
             try {
@@ -411,8 +452,8 @@
                 return false;
             }
         }
+        document.getElementById('salariesRefresher').style.display = 'none';
         messageContainer.textContent = 'Salaries were sent. Thanks for choosing us';
-        showBalance();
         return true;
     }
 
@@ -420,7 +461,7 @@
         const transferTransaction = {
             assetId: 'WAVES',
             feeAssetId: 'WAVES',
-            fee: DECIMALS * 0.005,
+            fee: DECIMALS * WAVES_FEE,
             attachment: '',
             amount: Math.floor(developer.amount * DECIMALS),
             recipient: developer.recipient,
@@ -443,6 +484,7 @@
         <!--currentWallet = WAVES.Seed.fromExistingPhrase('income desk floor glide act forward pilot poet evoke squirrel circle april pupil razor pole');-->
 
         document.getElementById('profileId').value = 'Lipnevich';
+        document.getElementById('salaryAmountId').value = 2;
         document.getElementById('repositoryId').value = 'smart-rewarding';
     }
 

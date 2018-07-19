@@ -102,10 +102,16 @@ input {
   border-radius: 4px;
 }
 
-#teamId input {
-  display: block;
+#teamId input, #calculationId input {
+  display: inline;
   width: 400px;
+}
 
+img {
+    margin:12px;
+    width:24px;
+    display:inline;
+    float:right;
 }
 
 input.invalid {
