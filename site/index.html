@@ -71,7 +71,7 @@
         <span class="step"></span>
     </div>
 </div>
-<div id='logger'>&hellip;</div>
+<div id='version'>v1.2</div>
 
 <script>
 
@@ -129,11 +129,11 @@
           switch(currentTab) {
             case 1 : valid = await checkRepository(document.getElementById('repositoryMessage'));  break;
             case 2 : valid = await refreshWallet(); break;
-            case 3 : valid = await calculateSalaries(document.getElementById('calculationMessage')); break;
-            case 4 : valid = await createSmartContract(document.getElementById('teamMessage')); break;
+            case 4 : valid = await createSmartContract(document.getElementById('calculationMessage')); break;
             case 5 : valid = await paySalaries(document.getElementById('salariesMessage')); break;
           }
-
+      }
+      if(valid) {
             progress++;
             for (let input of inputs) {
               input.disabled = true;
@@ -185,28 +185,6 @@
     function removeRedundantById(id){
          let iElement = document.getElementById(id);
          iElement.parentNode.removeChild(iElement);
-    }
-
-    function info(message) {
-        let logger = document.getElementById('logger');
-        logger.style.color = 'green';
-        logger.textContent = 'SUCCESS. ' + message;
-        setTimeout(clearLog, 2000, logger.textContent);
-    }
-
-    function clearLog(message) {
-        let logger = document.getElementById('logger');
-        if(logger.textContent == message) {
-            logger.style.color = 'green';
-            logger.textContent = '...';
-        }
-    }
-
-    function warn(message) {
-        let logger = document.getElementById('logger');
-        logger.style.color = 'red';
-        logger.textContent = 'ERROR. ' + message;
-        setTimeout(clearLog, 2000, logger.textContent);
     }
 
     <!--=============================== UI ===================================-->
@@ -317,19 +295,19 @@
         try {
             messageElement.textContent = 'Checking balance. Please wait...';
             let balanceDetails = await WAVES.API.Node.addresses.balanceDetails(currentWallet.address);
-
             balance = balanceDetails.available / DECIMALS;
+
             messageElement.textContent =  'Current balance is ' + balance + ' Waves.';
 
             if(balance < requiredMoney) {
                 messageElement.textContent += ' Please send '
-                    + parseFloat((+(requiredMoney - balance)).toFixed(5)) + ' Waves for ' + purpose;
+                    + parseFloat((+(requiredMoney - balance)).toFixed(8)) + ' Waves for ' + purpose;
                 return false;
             }
+
             return true;
         } catch(e) {
             messageElement.textContent = e.message;
-            warn(e.message);
             return false;
         };
     }
@@ -339,12 +317,11 @@
 
         if(salariesAmount >= DATA_AND_CONTRACT_FEE + (developers.length * WAVES_FEE)) {
             let moneyTotal = salariesAmount;
-            moneyTotal -= DATA_AND_CONTRACT_FEE;
             for(let author of developers) {
                 moneyTotal -= WAVES_FEE;
             }
             for(let author of developers) {
-                author.amount = (moneyTotal * author.part).toFixed(5);
+                author.amount = (moneyTotal * author.part).toFixed(8);
             }
             for(let developer of developers){
                 let salaryId = 'salaryForDeveloper' + developer.name;
@@ -360,15 +337,15 @@
                 salary.textContent = 'Salary for ' + developer.name + ' is ' + developer.amount + ' Waves';
             }
             messageElement.textContent = '';
-            return true;
         } else {
-            messageElement.textContent = 'Salary should be positive. Negative amount makes your developers unhappy';
-            return false;
+            throw { error : 'Salary should be positive. Negative amount makes your developers unhappy' };
         }
     }
 
     async function createSmartContract(messageElement) {
         try {
+            calculateSalaries(messageElement);
+
             messageElement.textContent = 'Storing data in Waves blockchain. Please wait...';
             await publishDataTx(messageElement);
 
@@ -403,8 +380,7 @@
             refreshSalaries();
             return true;
         } catch (e) {
-            messageElement.textContent = e ;
-            warn(e.error);
+            messageElement.textContent = e.error;
             return false;
         }
     }
@@ -435,6 +411,7 @@
     }
 
     async function paySalaries(messageContainer){
+        await refreshSalaries();
         if(balance < salariesAmount) {
             messageContainer.textContent = 'Not enough money for salary'
             return false;
@@ -442,10 +419,14 @@
 
         for(let developer of developers) {
             messageContainer.textContent = 'Sending salary to ' + developer.name + '. Please wait...';
+            let salaryStyle = document.getElementById('salaryForDeveloper' + developer.name).style;
             try {
                 await transfer(developer, currentWallet.keyPair);
+                salaryStyle.backgroundColor = '#CFF7C2';
+                salaryStyle.borderColor = '#4CAF50';
             } catch (e) {
-                warn(e.error);
+                salaryStyle.backgroundColor = '#FCB3BC';
+                salaryStyle.borderColor = '#ED4337';
                 messageContainer.textContent = e;
                 return false;
             }
@@ -468,7 +449,6 @@
 
         const transferred = await WAVES.API.Node.transactions
             .broadcast(WAVES.constants.TRANSFER_TX_NAME, transferTransaction, keyPair);
-        info(`Waves ${developer.amount} transferred to ${developer.recipient}.`);
     }
 
 
@@ -493,7 +473,6 @@
             <!--await smartContract(document.getElementById('welcomeMessage'));-->
             <!--await paySalaries(document.getElementById('welcomeMessage'));-->
         } catch (e) {
-            warn(e.message);
             document.getElementById('welcomeMessage').textContent = e;
         }
     }
