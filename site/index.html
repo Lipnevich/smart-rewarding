@@ -289,6 +289,7 @@
     }
 
     async function refreshSalaries() {
+        document.getElementById('walletMessage').textContent = '';
         let messageElement = document.getElementById('salariesMessage');
         let requiredMoney = salariesAmount;
         let purpose = 'salary payment';
@@ -341,7 +342,7 @@
             }
             messageElement.textContent = '';
         } else {
-            throw { error : 'Salary should be positive. Negative amount makes your developers unhappy' };
+            throw { error : 'Salary should be positive. Negative salary makes your developers unhappy' };
         }
     }
 
