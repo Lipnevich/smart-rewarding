@@ -33,7 +33,7 @@
 
     <div class="tab">
         <p>Waves wallet for <a target="_blank" id="repositoryLink">your GitHub repository</a>:</p>
-        <div><p class="code" id="walletId"></p><img src="icon/refresh.png" onclick="refreshWallet()"></div>
+        <div><p class="code" id="walletId"></p><img id="walletRefresher" src="icon/refresh.png" onclick="refreshWallet()"></div>
         <p id="walletMessage"></p>
     </div>
 
@@ -281,7 +281,10 @@
         let messageElement = document.getElementById('walletMessage');
         let requiredMoney = DATA_AND_CONTRACT_FEE;
         let purpose = 'data and smart contract creation';
-        return await checkBalance(messageElement, requiredMoney, purpose);
+        let enoughMoney = await checkBalance(messageElement, requiredMoney, purpose);
+        if(enoughMoney) {
+            document.getElementById('walletRefresher').style.display = 'none';
+        }
     }
 
     async function refreshSalaries() {
@@ -304,7 +307,6 @@
                     + parseFloat((+(requiredMoney - balance)).toFixed(8)) + ' Waves for ' + purpose;
                 return false;
             }
-
             return true;
         } catch(e) {
             messageElement.textContent = e.message;
