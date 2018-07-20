@@ -323,7 +323,7 @@
 
             if(balance < requiredMoney) {
                 messageElement.textContent += ' Please send '
-                    + (requiredMoney - balance) + ' Waves for ' + purpose;
+                    + parseFloat((+(requiredMoney - balance)).toFixed(5)) + ' Waves for ' + purpose;
                 return false;
             }
             return true;
